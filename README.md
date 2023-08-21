@@ -1,4 +1,4 @@
-# dwarp: learning-based image registration
+# dwarp
 
 This repository contains code for:
  - **POLAFFINI** [1]: a segmentation-based polyaffine initialization for improved non-linear image Registration. 
