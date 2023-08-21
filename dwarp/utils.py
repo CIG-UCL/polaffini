@@ -69,47 +69,61 @@ def plot_losses(loss_file, is_val=False):
     plt.show()
 
 
-def jacobian(transfo, outDet=False, is_shift=False):
+def jacobian(transfo, outDet=False, dire=None, is_shift=False):
     # takes a tensor of shape [batch_size, sx, sy, (sz,) ndims] as input.
-
+    
     if isinstance(transfo.shape, (tf.compat.v1.Dimension, tf.TensorShape)):
         volshape = transfo.shape[1:-1].as_list()
     else:
         volshape = transfo.shape[1:-1]
     ndims = len(volshape)
+    ndirs = transfo.shape[-1]
+    if dire is not None and ndirs != 1:
+        raise Exception('the last dim should be of size 1 for a unidirectional field, but got: %s' % ndims)
     
-    jacob = [None] * ndims
+    jacob = []
     for d in range(ndims):
         grad = tf.gather(transfo, range(2, volshape[d]), axis=d+1)-tf.gather(transfo, range(volshape[d]-2), axis=d+1)
-        grad = tf.expand_dims(grad, axis=ndims+1)
-        grad_left = tf.gather(transfo, 1, axis=d+1)-tf.gather(transfo, 0, axis=d+1)
-        grad_left = tf.expand_dims(tf.expand_dims(grad_left, d+1), ndims+1)
-        grad_right = tf.gather(transfo, volshape[d]-1, axis=d+1)-tf.gather(transfo, volshape[d]-2, axis=d+1)
-        grad_right = tf.expand_dims(tf.expand_dims(grad_right, d+1), ndims+1)
-        jacob[d] = tf.concat((grad_left, grad/2, grad_right), axis=d+1)
+        grad_left = tf.gather(transfo, [1], axis=d+1)-tf.gather(transfo, [0], axis=d+1)
+        grad_right = tf.gather(transfo, [volshape[d]-1], axis=d+1)-tf.gather(transfo, [volshape[d]-2], axis=d+1)
+        grad = tf.concat((grad_left, grad/2, grad_right), axis=d+1)  
+        grad = tf.expand_dims(grad, axis=-1)
+        jacob += [grad]
     
-    jacob = tf.concat(jacob, axis=ndims+1) 
+    jacob = tf.concat(jacob, axis=-1) 
+    
     if is_shift:
-        jacob += tf.eye(ndims, ndims, transfo.shape[:-1])
-        
+        if dire is None:
+            jacob += tf.eye(ndims, ndims, transfo.shape[:-1])
+        else:
+            identity = [tf.ones(transfo.shape[:-1]) if d==dire else tf.zeros(transfo.shape[:-1]) for d in range(ndims)]
+            jacob += tf.expand_dims(tf.stack(identity, axis=-1), axis=-2)
+
     if outDet:
         # detjac = tf.linalg.det(jacob)
         if ndims == 2:
-            detjac =  jacob[:,:,:,0,0] * jacob[:,:,:,1,1]\
-                    - jacob[:,:,:,1,0] * jacob[:,:,:,0,1] 
+            if ndirs == 2:
+                detjac =  jacob[:,:,:,0,0] * jacob[:,:,:,1,1]\
+                        - jacob[:,:,:,1,0] * jacob[:,:,:,0,1] 
+            elif ndirs == 1:
+                detjac = jacob[:,:,:,0,dire]
         elif ndims == 3:
-            detjac =  jacob[:,:,:,:,0,0] * jacob[:,:,:,:,1,1] * jacob[:,:,:,:,2,2]\
-                    + jacob[:,:,:,:,0,1] * jacob[:,:,:,:,1,2] * jacob[:,:,:,:,2,0]\
-                    + jacob[:,:,:,:,0,2] * jacob[:,:,:,:,1,0] * jacob[:,:,:,:,2,1]\
-                    - jacob[:,:,:,:,2,0] * jacob[:,:,:,:,1,1] * jacob[:,:,:,:,0,2]\
-                    - jacob[:,:,:,:,1,0] * jacob[:,:,:,:,0,1] * jacob[:,:,:,:,2,2]\
-                    - jacob[:,:,:,:,0,0] * jacob[:,:,:,:,2,1] * jacob[:,:,:,:,1,2]
+            if ndirs == 3:
+                detjac =  jacob[:,:,:,:,0,0] * jacob[:,:,:,:,1,1] * jacob[:,:,:,:,2,2]\
+                        + jacob[:,:,:,:,0,1] * jacob[:,:,:,:,1,2] * jacob[:,:,:,:,2,0]\
+                        + jacob[:,:,:,:,0,2] * jacob[:,:,:,:,1,0] * jacob[:,:,:,:,2,1]\
+                        - jacob[:,:,:,:,2,0] * jacob[:,:,:,:,1,1] * jacob[:,:,:,:,0,2]\
+                        - jacob[:,:,:,:,1,0] * jacob[:,:,:,:,0,1] * jacob[:,:,:,:,2,2]\
+                        - jacob[:,:,:,:,0,0] * jacob[:,:,:,:,2,1] * jacob[:,:,:,:,1,2]
+            elif ndirs == 1:
+                detjac = jacob[:,:,:,:,0,dire]
         else:
             raise Exception('Only dimension 2 or 3 supported, but got: %s' % ndims)
             
         return jacob, detjac
     else: 
         return jacob 
+
 
 
 def get_matOrientation(img, decomp=False):
