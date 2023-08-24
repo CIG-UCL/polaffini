@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(description="Training script for dwarp diffeomo
 # training and validation data
 parser.add_argument('-t', '--train_data', type=str, required=True, help='Path to the training data initialized using pretrain script (should be the same as the -o from pretrain script).')
 parser.add_argument('-v', '--val_data', type=str, required=False, default=None, help='Path to the validation data initialized using pretrain script (should be the same as the -o from pretrain script).')
-parser.add_argument('-s', '--use-seg', type=int, required=False, default=0, help='Use segmentations at training (1:yes, 0:no). Default: 0.')
+parser.add_argument('-s', '--use-seg', type=int, required=False, default=0, help='Use segmentations at training (1: yes, 0: no). Default: 0.')
 # model and its hyper-paramaters
 parser.add_argument('-o', '--model', type=str, required=True, help="Path to the output model (.h5).")
 parser.add_argument('-lr', '--learning-rate', type=float, required=False, default=1e-4, help="Learning rate. Default: 1e-4.")
@@ -31,9 +31,13 @@ parser.add_argument('-ls', '--loss-seg', type=str, required=False, default='dice
 parser.add_argument('-lw', '--loss-win', type=int, required=False, default=5, help="Window diameter (in voxels) for local losses (nlcc). Default: 5")
 parser.add_argument('-ws', '--weight-seg-loss', type=float, required=False, default=0.01, help="Weight for the segmentation loss. Default: 0.01.")
 parser.add_argument('-wr', '--weight-reg-loss', type=float, required=False, default=1, help="Weight for the regularization loss. Default: 1.")
+# other
+parser.add_argument('-r', '--resume', type=int, required=False, default=0, help='Resume a traning that stopped for some reason (1: yes, 0: no). Default: 0.')
+
 
 args = parser.parse_args()
 args.use_seg = bool(args.use_seg)
+args.resume = bool(args.resume)
 
 #%% Generators to access training (and validation) data.
 
@@ -63,11 +67,11 @@ else:
     mov_seg_files_val = None
     if args.use_seg:
         mov_seg_files_val = sorted(glob.glob(os.path.join(args.val_data, 'seg/*')))
-    gen_train = dwarp.generators.mov2atlas_initialized(mov_files = mov_files_val, 
-                                                       ref_file = ref_file,
-                                                       mov_seg_files = mov_seg_files_val,
-                                                       ref_seg_file = ref_seg_file,
-                                                       batch_size = args.batch_size)
+    gen_val = dwarp.generators.mov2atlas_initialized(mov_files = mov_files_val, 
+                                                     ref_file = ref_file,
+                                                     mov_seg_files = mov_seg_files_val,
+                                                     ref_seg_file = ref_seg_file,
+                                                     batch_size = args.batch_size)
     n_val = len(mov_files_val)
 
 ref = sitk.ReadImage(ref_file)
@@ -106,20 +110,28 @@ assert np.mod(args.batch_size, nb_devices) == 0, \
     'Batch size (%d) should be a multiple of the nr of gpus (%d)' % (args.batch_size, nb_devices)
 
 with tf.device(device):
-# build the model
-    model = dwarp.networks.diffeo2atlas_net(inshape=inshape,
+    if args.resume:
+        # load existing model
+        model = dwarp.networks.diffeo2atlas.load(args.model)
+        with open(args.model[:-3] + '_losses.csv', 'r') as loss_file:
+            for initial_epoch, _ in enumerate(loss_file):
+                pass
+        print('resuming training at epoch: ' + str(initial_epoch))
+    else:
+        # build the model
+        model = dwarp.networks.diffeo2atlas(inshape=inshape,
                                             orientation=matO,
                                             nb_enc_features=args.enc_nf,
                                             nb_dec_features=args.dec_nf,
                                             src_feats=nfeats,
                                             nb_labs = nb_labs,
                                             int_steps=7)
+        initial_epoch = 0
       
     model.compile(optimizer=optimizer, loss=losses, loss_weights=loss_weights)
 
 #%% Train the model
 
-    initial_epoch = 0
     steps_per_epoch = n_train // args.batch_size
     if args.val_data is None:   
         val_steps = None

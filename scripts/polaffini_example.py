@@ -1,7 +1,7 @@
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0]))))
-import polaffini.polaffini
+import polaffini.polaffini as polaffini
 import SimpleITK as sitk
 import time
 

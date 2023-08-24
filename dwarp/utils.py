@@ -54,19 +54,21 @@ def plot_losses(loss_file, is_val=False):
     tab_loss = pd.read_csv(loss_file, sep=',')
     nb_losses = len(tab_loss.columns) - 1
     if is_val:
-        nb_losses /= 2
+        nb_losses = int(nb_losses / 2)
     
     f, axs = plt.subplots(1,nb_losses); f.dpi = 200
-    plt.rcParams['font.size'] = '5'
+    plt.rcParams['font.size'] = '3'
+    plt.rcParams["xtick.major.size"] = 2
+    plt.rcParams["ytick.major.size"] = 2
     
     for l in range(nb_losses):
-        axs[l].plot(tab_loss.epoch, tab_loss.loc[:,tab_loss.columns[l+1]])    
-        if is_val and l > nb_losses / 2:
-            continue
-        else:
-            axs[l].set_title(tab_loss.columns[l+1], fontsize=6)
+        axs[l].plot(tab_loss.epoch, tab_loss.loc[:,tab_loss.columns[l+1]], linewidth=0.5) 
+        if is_val:
+            axs[l].plot(tab_loss.epoch, tab_loss.loc[:,tab_loss.columns[nb_losses+l+1]], linewidth=0.5) 
+        axs[l].set_title(tab_loss.columns[l+1], fontsize=6)
     
     plt.show()
+
 
 
 def jacobian(transfo, outDet=False, dire=None, is_shift=False):

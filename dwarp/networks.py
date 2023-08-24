@@ -213,15 +213,14 @@ class diffeo2atlas(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDens
         if is_seg:
             moving_seg = tf.keras.Input(shape=(*inshape, nb_labs), name='%s_moving_seg_input' % name)  #, dtype='bool')
             inputs = inputs + [moving_seg]
-            # moved_seg = voxelmorph.layers.SpatialTransformer(datatype='bool', interp_method='nearest', indexing='ij', name='resampler_seg')([moving_seg, transfo])  
-            moved_seg = layers.Resampler(interp_method='nearest', name='resampler_seg')([moving_seg, transfo])  
+            moved_seg = voxelmorph.layers.SpatialTransformer(interp_method='nearest', indexing='ij', name='resampler_seg')([moving_seg, transfo])  
             dummy_layer = KL.Lambda(lambda x: x, name='seg')
             moved_seg = dummy_layer(moved_seg)
             outputs += [moved_seg]
         if is_aux:
             moving_aux = tf.keras.Input(shape=(*inshape, src_feats), name='%s_moving_aux_input' % name)
             inputs = inputs + [moving_aux]
-            moved_aux = layers.Resampler(interp_method='linear', name='resampler_aux')([moving_aux, transfo])  
+            moved_aux = voxelmorph.layers.SpatialTransformer(interp_method='linear', indexing='ij', name='resampler_aux')([moving_aux, transfo])
             dummy_layer = KL.Lambda(lambda x: x, name='aux')
             moved_aux = dummy_layer(moved_aux)
             outputs += [moved_aux]
@@ -266,8 +265,7 @@ class diffeo2atlas(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDens
 
 class sudistoc(ne.modelio.LoadableModel):
     """
-    sudistoc network for suceptibility distortion correction of echo-planar images
-    through constrained non-linear registration of images acquired with reversed PED.
+    sudistoc network for suceptibility distortion correction.
     """
 
     @ne.modelio.store_config_args
@@ -284,7 +282,6 @@ class sudistoc(ne.modelio.LoadableModel):
                  trg_feats=1,
                  unet_half_res=False,
                  input_model=None,              
-                 kissing=True,
                  constraint='oppsym',  # 'oppsym' (opposite symmetry) or 'diffeo' (inverse symmetry)
                  ped=None,   # axis corresponding to the phase encoding direction. If None, unconstrained registration.
                  jacob_mod=True,   # jacobian intensity modulation               
@@ -292,30 +289,9 @@ class sudistoc(ne.modelio.LoadableModel):
                  image_sup=False,  # supervised with ground truth image
                  unsup=True,  # unsupervised similarity between undistorted images
                  name='sudistoc_net'):
-        """ 
-        Parameters:
-            inshape: Input shape. e.g. (192, 192, 192)
-            nb_unet_features: Unet convolutional features. Can be specified via a list of lists with
-                the form [[encoder feats], [decoder feats]], or as a single integer. If None (default),
-                the unet features are defined by the default config described in the unet class documentation.
-            nb_unet_levels: Number of levels in unet. Only used when nb_unet_features is an integer. Default is None.
-            unet_feat_mult: Per-level feature multiplier. Only used when nb_unet_features is an integer. Default is 1.
-            nb_unet_conv_per_level: Number of convolutions per unet level. Default is 1.
-            int_steps: Number of flow integration steps. The warp is non-diffeomorphic when this value is 0.
-            int_downsize: Integer specifying the flow downsample factor for vector integration. The flow field
-                is not downsampled when this value is 1.
-            bidir: Enable bidirectional cost function. Default is False.
-            use_probs: Use probabilities in flow field. Default is False.
-            src_feats: Number of source image features. Default is 1.
-            trg_feats: Number of target image features. Default is 1.
-            unet_half_res: Skip the last unet decoder upsampling. Requires that int_downsize=2. Default is False.
-            input_model: Model to replace default input layer before concatenation. Default is None.
-            name: Model name - also used as layer name prefix. Default is 'vxm_dense'.
-        """
         
         # ensure compatible settings
-        if unsup and not kissing:
-            raise ValueError('Unsupervised setting impossible with single image (no kissing)')
+
         if not transfo_sup and not image_sup and not unsup:
             raise ValueError('At least one of transfo_sup, image_sup or unsup has to be True')
 
@@ -334,152 +310,107 @@ class sudistoc(ne.modelio.LoadableModel):
 
         # build core unet model and grab inputs
         unet_model = voxelmorph.networks.Unet(input_model=input_model,
-                                              nb_features=nb_unet_features,
-                                              nb_levels=nb_unet_levels,
-                                              feat_mult=unet_feat_mult,
-                                              nb_conv_per_level=nb_unet_conv_per_level,
-                                              half_res=unet_half_res)
+                                       nb_features=nb_unet_features,
+                                       nb_levels=nb_unet_levels,
+                                       feat_mult=unet_feat_mult,
+                                       nb_conv_per_level=nb_unet_conv_per_level)
 
         # transform unet output into a flow field
         Conv = getattr(KL, 'Conv%dD' % ndims)
         if ped is None:
-            flow_mean = Conv(ndims, kernel_size=3, padding='same',
+            field_pos = Conv(ndims, kernel_size=3, padding='same',
                     kernel_initializer=KI.RandomNormal(mean=0.0, stddev=1e-5), name='%s_flow' % name)(unet_model.output)
         else:
-            flow_mean = Conv(1, kernel_size=3, padding='same',
+            field_pos = Conv(1, kernel_size=3, padding='same',
                     kernel_initializer=KI.RandomNormal(mean=0.0, stddev=1e-5), name='%s_flow' % name)(unet_model.output)
-            flow_zeros = tf.keras.backend.zeros_like(flow_mean)
-            
+
             flow_list = []  
             for i in range(0, ndims):
                 if i == ped:
-                    flow_list.append(flow_mean)
+                    flow_list.append(field_pos)
                 else:
-                    flow_list.append(flow_zeros)
+                    flow_list.append(tf.keras.backend.zeros_like(field_pos))
              
-            flow_mean = KL.concatenate(flow_list, name='%s_concat_flow' % name)
-            
-        # optionally include probabilities
-        if use_probs:
-            # initialize the velocity variance very low, to start stable
-            flow_logsigma = Conv(ndims, kernel_size=3, padding='same',
-                            kernel_initializer=KI.RandomNormal(mean=0.0, stddev=1e-10),
-                            bias_initializer=KI.Constant(value=-10),
-                            name='%s_log_sigma' % name)(unet_model.output)
-            flow_params = KL.concatenate([flow_mean, flow_logsigma], name='%s_prob_concat' % name)
-            flow = ne.layers.SampleNormalLogVar(name='%s_z_sample' % name)([flow_mean, flow_logsigma])
-        else:
-            flow_params = flow_mean
-            flow = flow_mean
-
-        if not unet_half_res:
-            # optionally resize for integration
-            if int_steps > 0 and int_downsize > 1:
-                flow = voxelmorph.layers.RescaleTransform(1 / int_downsize, name='%s_flow_resize' % name)(flow)
-
-        preint_flow = flow
-
-        pos_flow = flow
+            field_pos = KL.concatenate(flow_list, name='%s_concat_flow' % name)
         
-        if kissing and constraint == 'diffeo':
-            neg_flow = ne.layers.Negate(name='%s_neg_flow' % name)(flow)            
-
+        field_neg = ne.layers.Negate(name='%s_neg_flow' % name)(field_pos)            
+        
+        preInt_field = field_pos
         # integrate to produce diffeomorphic warp (i.e. treat flow as a stationary velocity field)
         if int_steps > 0:
-            pos_flow = voxelmorph.layers.VecInt(method='ss', name='%s_flow_int' % name, int_steps=int_steps)(pos_flow)
-            if kissing and constraint == 'diffeo':
-                neg_flow = voxelmorph.layers.VecInt(method='ss', name='%s_neg_flow_int' % name, int_steps=int_steps)(neg_flow)
+            field_pos = voxelmorph.VecInt(method='ss', name='%s_flow_int' % name, int_steps=int_steps)(field_pos)
+            if constraint == 'diffeo':
+                field_neg = voxelmorph.layers.VecInt(method='ss', name='%s_neg_flow_int' % name, int_steps=int_steps)(field_neg)
                 
             # resize to final resolution
             if int_downsize > 1:
-                pos_flow = voxelmorph.layers.RescaleTransform(int_downsize, name='%s_diffflow' % name)(pos_flow)
-                if kissing and constraint == 'diffeo':
-                    neg_flow = voxelmorph.layers.RescaleTransform(int_downsize, name='%s_neg_diffflow' % name)(neg_flow)
+                field_pos = voxelmorph.layers.RescaleTransform(int_downsize, name='%s_diffflow' % name)(field_pos)
+                if constraint == 'diffeo':
+                    field_neg = voxelmorph.layers.RescaleTransform(int_downsize, name='%s_neg_diffflow' % name)(field_neg)
                     
         if constraint == 'oppsym':
-            neg_flow = ne.layers.Negate(name='%s_neg_transfo' % name)(pos_flow)               
+            field_neg = ne.layers.Negate(name='%s_neg_transfo' % name)(field_pos)               
 
 
         # warp image with flow field
-        y_source = voxelmorph.layers.SpatialTransformer(interp_method='linear', indexing='ij', name='%s_transformer' % name)([source, pos_flow])
-        if kissing:
-            y_target = voxelmorph.layers.SpatialTransformer(interp_method='linear', indexing='ij', name='%s_neg_transformer' % name)([target, neg_flow])
+        y_source = voxelmorph.layers.SpatialTransformer(interp_method='linear', indexing='ij', name='%s_transformer' % name)([source, field_pos])
+        y_target = voxelmorph.layers.SpatialTransformer(interp_method='linear', indexing='ij', name='%s_neg_transformer' % name)([target, field_neg])
         if jacob_mod:
-            y_source = layers.JacobianMultiplyIntensities(indexing='ij', name='%s_det_Jac_multiply_source' % name)([y_source, pos_flow])
-            if kissing:
-                y_target = layers.JacobianMultiplyIntensities(indexing='ij', name='%s_det_Jac_multiply_target' % name)([y_target, neg_flow])
+            y_source = layers.JacobianMultiplyIntensities(indexing='ij', name='%s_det_Jac_multiply_source' % name)([y_source, field_pos])
+            y_target = layers.JacobianMultiplyIntensities(indexing='ij', name='%s_det_Jac_multiply_target' % name)([y_target, field_neg])
         
-        if ped is not None:
-            pos_flow_dir = layers.Slice(index=ped, name='%s_slice_pos_transfo' % name)(pos_flow)
-            neg_flow_dir = layers.Slice(index=ped, name='%s_slice_neg_transfo' % name)(neg_flow)
-        else:
-            pos_flow_dir = pos_flow
-            neg_flow_dir = neg_flow
-            
+
         outputs=[]
         
         if unsup:
-            y_diff = KL.Subtract(name='unsup')([y_target, y_source])
-            outputs += [y_diff]
+            outputs += [tf.concat([y_target, y_source], axis=-1, name='unsup')]
          
         if image_sup:
             dummy_layer = KL.Lambda(lambda x: x, name='sup_image')
             y_source = dummy_layer(y_source)
             outputs += [y_source]
-            if kissing: 
-                dummy_layer = KL.Lambda(lambda x: x, name='sup_image_neg')
-                y_target = dummy_layer(y_target)
-                outputs += [y_target]
+            dummy_layer = KL.Lambda(lambda x: x, name='sup_image_neg')
+            y_target = dummy_layer(y_target)
+            outputs += [y_target]
          
         if transfo_sup:
             dummy_layer = KL.Lambda(lambda x: x, name='sup_field')
-            pos_flow_dir = dummy_layer(pos_flow_dir)
+            pos_flow_dir = dummy_layer(tf.expand_dims(field_pos[..., ped],-1))
             outputs += [pos_flow_dir]
-            if kissing:
-                dummy_layer = KL.Lambda(lambda x: x, name='sup_field_neg')
-                neg_flow_dir = dummy_layer(neg_flow_dir)
-                outputs += [neg_flow_dir]
+            dummy_layer = KL.Lambda(lambda x: x, name='sup_field_neg')
+            neg_flow_dir = dummy_layer(tf.expand_dims(field_neg[..., ped],-1))
+            outputs += [neg_flow_dir]
          
-        if use_probs:
-            # compute loss on flow probabilities
-            dummy_layer = KL.Lambda(lambda x: x, name='smooth')
-            flow_params = dummy_layer(flow_params)
-            outputs += [flow_params]
-        else:
-            # compute smoothness loss on pre-integrated warp
-            dummy_layer = KL.Lambda(lambda x: x, name='smooth')
-            preint_flow = dummy_layer(preint_flow)
-            outputs += [preint_flow]
+        # compute smoothness loss on pre-integrated warp
+        dummy_layer = KL.Lambda(lambda x: x, name='smooth')
+        preint_flow = dummy_layer(preInt_field)
+        outputs += [preint_flow]
           
         super().__init__(name=name, inputs=input_model.inputs, outputs=outputs)
 
         # cache pointers to layers and tensors for future reference
         self.references = ne.modelio.LoadableModel.ReferenceContainer()
-        self.references.unet_model = unet_model
-        self.references.kissing = kissing if kissing else None
         self.references.unsup = unsup if unsup else None
-        self.references.y_diff = y_diff if unsup else None
         self.references.y_source = y_source
-        self.references.y_target = y_target if kissing else None
-        self.references.pos_flow = pos_flow
-        self.references.neg_flow = neg_flow if kissing else None
-        self.references.pos_flow_dir = pos_flow_dir
-        self.references.neg_flow_dir = neg_flow_dir
+        self.references.y_target = y_target 
+        self.references.pos_flow = field_pos
+        self.references.neg_flow = field_neg 
+        self.references.pos_flow_dir = tf.expand_dims(field_pos[..., ped],-1)
+        self.references.neg_flow_dir = tf.expand_dims(field_neg[..., ped],-1)
+        self.references.jacob_mod = jacob_mod
         
     def get_registration_model(self):
         """
         Returns a reconfigured model to predict only the final transform.
         """
-        return tf.keras.Model(self.inputs[:2], self.references.y_source)
+        return tf.keras.Model(self.inputs, [self.references.pos_flow,self.references.neg_flow])
     
     def register(self):
         """
         Returns a reconfigured model to predict only the final transform.
         """
-        if self.references.kissing:
-            return tf.keras.Model(self.inputs, [self.references.y_source, self.references.y_target, self.references.pos_flow_dir, self.references.neg_flow_dir])
-        else:
-            return tf.keras.Model(self.inputs, [self.references.y_source, self.references.pos_flow])
+        return tf.keras.Model(self.inputs, [self.references.y_source, self.references.y_target, self.references.pos_flow_dir, self.references.neg_flow_dir])
+
 
     def register2(self, src, trg):
         """
@@ -487,14 +418,18 @@ class sudistoc(ne.modelio.LoadableModel):
         """
         return self.register().predict([src, trg])
 
-    def apply_transform(self, src, trg, img, interp_method='linear'):
-        """
-        Predicts the transform from src to trg and applies it to the img tensor.
-        """
+    def apply_corr(self, in_img1, in_img2, img1, img2):
+
         warp_model = self.get_registration_model()
-        img_input = tf.keras.Input(shape=img.shape[1:])
-        y_img = voxelmorph.layers.SpatialTransformer(interp_method=interp_method)([img_input, warp_model.output])
-        return tf.keras.Model(warp_model.inputs + [img_input], y_img).predict([src, trg, img])
+        img1_input = tf.keras.Input(shape=img1.shape[1:])
+        img2_input = tf.keras.Input(shape=img2.shape[1:])
+        img1_corr = voxelmorph.layers.SpatialTransformer(interp_method='linear', indexing='ij')([img1_input, warp_model.output[0]])
+        img2_corr = voxelmorph.layers.SpatialTransformer(interp_method='linear', indexing='ij')([img2_input, warp_model.output[1]])
+        # if self.references.jacob_mod:
+        img1_corr = layers.JacobianMultiplyIntensities(indexing='ij')([img1_corr, warp_model.output[0]])
+        img2_corr = layers.JacobianMultiplyIntensities(indexing='ij')([img2_corr, warp_model.output[1]])
+                
+        return tf.keras.Model(warp_model.inputs + [img1_input, img2_input], [img1_corr, img2_corr]).predict([in_img1, in_img2, img1, img2])
 
         
 class encoder(tf.keras.Model): # Similar code to voxelmorph's Unet but truncated to only keep the encoder part.

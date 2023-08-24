@@ -103,7 +103,9 @@ def estimateTransfo(mov_seg, ref_seg,
                                                              mov_vol = mov_vols[l],
                                                              transfos_type=transfos_type)   
             loc_mat = scipy.linalg.logm(loc_mat)
-
+            if not np.isrealobj(loc_mat):
+                continue
+            
             # Compute weight map
             if dist == 'center':
                 if transfos_type == 'volrot':

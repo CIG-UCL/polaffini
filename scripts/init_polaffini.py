@@ -65,7 +65,6 @@ def init_polaffini_set(mov_files,
             print(i+1, '/', len(mov_files), end="\r", flush=True)
             
         mov_seg = sitk.ReadImage(mov_seg_files[i])
-        
         init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=mov_seg, 
                                                           ref_seg=ref_seg,
                                                           sigma=sigma,
