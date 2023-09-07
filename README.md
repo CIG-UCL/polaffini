@@ -5,12 +5,22 @@ This repository contains code for:
  - **dwarp**: tools for deep learning non-linear image registration to a template.
 Code is in Python, deep-learning stuffs are based on Tensorflow library, image io and processing is done using SimpleITK, deep-learning registration uses Voxelmorph [2] core.
 
-# How to use POLAFFINI
-## Simple tutorial between 2 subjects
+# Simple POLAFFINI tutorial between 2 subjects
 scripts/polaffini_example.py is a basic tutorial for POLAFFNI initialization between 2 subjects whose images can be found in example_data. 
 
+# Registering a dataset to the MNI template
+The target MNI template is the ICBM 2009c Nonlinear Symmetric version.
+The non-linear registration model has been trained on skull-stripped T1-weighted images.
+This tutorial requires homologous data of 2 types:
+ - T1-weighted images, skull-stripped.
+ - Segmentations, DKT protocol. Can been obtain usinf FreeSurfer, FastSurfer, SynthSeg...
+   
+## POLAFFINI
+
+## Non-linear registration
+
+
 # References
-We have several VoxelMorph tutorials:
   - [1] **POLAFFINI** [[IPMI 2023 paper]](https://link.springer.com/content/pdf/10.1007/978-3-031-34048-2_47.pdf?pdf=inline%20link).
 
 # External repositories
