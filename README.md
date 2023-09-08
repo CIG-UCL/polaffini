@@ -2,18 +2,20 @@
 
 This repository contains code for:
  - **POLAFFINI** [1]: a segmentation-based polyaffine initialization for improved non-linear image Registration. 
- - **dwarp**: tools for deep learning non-linear image registration to a template.
-Code is in Python, deep-learning stuffs are based on Tensorflow library, image io and processing is done using SimpleITK, deep-learning registration uses Voxelmorph [2] core.
+ - **dwarp**: tools for deep learning non-linear image registration to a template, and more...
+
+Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK, deep-learning registration uses Voxelmorph [2] core.
 
 # Simple POLAFFINI tutorial between 2 subjects
-scripts/polaffini_example.py is a basic tutorial for POLAFFNI initialization between 2 subjects whose images can be found in example_data. 
+scripts/polaffini_example.py is a basic tutorial for POLAFFINI initialization between 2 subjects whose images can be found in example_data. 
 
 # Registering a dataset to the MNI template
-The target MNI template is the ICBM 2009c Nonlinear Symmetric version.
+The default MNI templates in **dwarp** are [ICBM 2009c Nonlinear Symmetric](https://www.mcgill.ca/bic/icbm152-152-nonlinear-atlases-version-2009) versions with voxel sizes 1 and 2 mm isotropic.
 The non-linear registration model has been trained on skull-stripped T1-weighted images.
-This tutorial requires homologous data of 2 types:
+
+This tutorial requires an MR dataset containing homologous data of 2 types:
  - T1-weighted images, skull-stripped.
- - Segmentations, DKT protocol. Can been obtain usinf FreeSurfer, FastSurfer, SynthSeg...
+ - Segmentations, DKT protocol. Can been obtained using FreeSurfer, FastSurfer, SynthSeg...
    
 ## POLAFFINI
 
