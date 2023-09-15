@@ -20,17 +20,17 @@ This tutorial requires an MR dataset containing homologous data of 2 types:
 python ~/tests/ainostics/dwarp/register.py -M <path-to-dwarp-public-directory>/diffeo2mni.h5\
                                            -m <path-to-moving-image>\
                                            -ms <path-to-moving-segmentation>\
-                                           -oi <path-to-moved-image>
-                                           -os <path-to-moved-segmentation>
+                                           -oi <path-to-moved-image>\
+                                           -os <path-to-moved-segmentation>\
                                            -g mni1\
                                            -polaffini 1 -omit_labs 2 41 -downf 2
 ```
                                            
-Use `-h` to display help.\
-`diffeo2mni.h5` is a pre-trained model depicted in section Resources. You can instead provide the path to another model trained as depicted in section Training a new registration model from scratch.
+Use `-h` to show more options and display help.\
+`diffeo2mni.h5` is a pre-trained model depicted in section Resources. You can instead provide the path to another model trained as depicted in section Training a new registration model from scratch.\
 `-g mni1` indicates that the geometry (orientation + image dimensions + voxel size) image used for resampling is the MNI template with voxel size 1 mm isotropic.\
-`-os 1` toggles the output of the moved segmentations (in one-hot encoding) so that they can be leveraged during the training of the model.
-`-polaffini 1` indicates the POLAFFINI is performed.
+`-os 1` toggles the output of the moved segmentations (in one-hot encoding) so that they can be leveraged during the training of the model.\
+`-polaffini 1` indicates the POLAFFINI is performed.\
 `-omit_labs 2 41` will omit those labels for POLAFFINI as they are too big (whole left and right white matter) so taking their centroids is a bit meaningless.\
 
    
@@ -55,10 +55,10 @@ python <path-to-dwarp_public>/scripts/init_polaffini.py -m "<path-to-validation-
                                                         -o <path-to-output-directory>/val\
                                                         -kpad 5 -os 1 -downf 2 -omit_labs 2 41
 ```
-Use `-h` to display help.\
+Use `-h` to show more options and display help.\
 `-r mni2` indicates that the target template is the MNI with voxel size 2 mm isotropic. You can instead provide the path to a template of your choice (in this case you also need to provide the associated segmentation using `-rs`).\
 `-kpad 5` ensures that the output image dimensions are a multiple of 2<sup>5</sup> since we'll train a U-net model with 5 levels of econding / decoding. Adapt this to your model architecture.\
-`-os 1` toggles the output of the moved segmentations (in one-hot encoding) so that they can be leveraged during the training of the model.
+`-os 1` toggles the output of the moved segmentations (in one-hot encoding) so that they can be leveraged during the training of the model.\
 `-omit_labs 2 41` will omit those labels for POLAFFINI as they are too big (whole left and right white matter) so taking their centroids is a bit meaningless.\
 The output directories will be organized as follow:\
 &ensp; ├ img - folder containing moved images\
@@ -74,15 +74,12 @@ python <path-to-dwarp_public>/scripts/train.py -o <path-to-output-directory>/mod
                                                -v <path-to-output-directory>/val\
                                                -s 1 -l nlcc -ls dice
 ```
-Use `-h` to display help.\
+Use `-h` to show more options and display help.\
 `-s 1` indicates that segmentations are leveraged during the training.\
 `-l nlcc` indicates the normalized squared local correlation coefficient is used as image loss.\
 `-ls dice` indicates that Dice score is used as segmentation loss.
 
-## POLAFFINI + Non-linear registration for a subject (typical use)
-This is 
-
-# Ressources
+# Included ressources
   - MNI template: The default MNI template used here is the [ICBM 2009c Nonlinear Symmetric](https://www.mcgill.ca/bic/icbm152-152-nonlinear-atlases-version-2009) version. One can find it, together with its associated DKT segmentation, in `dwarp_public/ref/` with voxel sizes 1 and 2 mm isotropic.
   - Pre-trained model: `diffeo2mni.h5` is a pre-trained model for non-linear registration to the MNI template. The training procedure is the one depicted in section Training a new registration model from scratch. It has been trained on skull-strpped T1-weighted images from 100 subjects (20 UKBiobank, 20 IXI, 60 ADNI (20 HC, 20 MCI, 20 AD)), with 25 subjects for validation (5 UKBiobank, 5 IXI, 15 ADNI (5 HC, 5 MCI, 5 AD)). The MNI version is the one depicted above with voxel size 2 mm istropic. The image loss was the normalized squared local correlation coefficient (nlcc), regularization loss had a weight of 1, segmentation was leveraged during training using a Dice loss with weight 0.01.
     
