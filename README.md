@@ -1,4 +1,4 @@
-# dwarp
+# dwarp & POLAFFINI
 
 This repository contains code for:
  - **POLAFFINI** [1]: a segmentation-based polyaffine initialization for improved non-linear image Registration. 
@@ -7,7 +7,7 @@ This repository contains code for:
 Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK, deep-learning registration uses Voxelmorph [2] core.
 
 # Simple POLAFFINI tutorial between 2 subjects
-scripts/polaffini_example.py is a basic tutorial for POLAFFINI initialization between 2 subjects whose images can be found in example_data. 
+The `dwarp_public/scripts/polaffini_example.py` script is a basic tutorial for POLAFFINI between 2 subjects. Data for this tutorial can be found in `dwarp_public/exmaple_data`.
 
 # Registering a dataset to the MNI template
 
@@ -36,7 +36,7 @@ Use `-h` to display help.\
    
 ## Training a new registration model from scratch
 
-### 1. POLAFFINI and data preparation ###
+### 1. POLAFFINI and data preparation
 The `dwarp_public/script/init_polaffini.py` script is designed to carry out 2 tasks:
  - Perform POLAFFINI.
  - Prepare the data for training: resizing, intensity normalization, one-hot encoding for segmentations...
@@ -84,9 +84,8 @@ This is
 
 # Ressources
   - MNI template: The default MNI template used here is the [ICBM 2009c Nonlinear Symmetric](https://www.mcgill.ca/bic/icbm152-152-nonlinear-atlases-version-2009) version. One can find it, together with its associated DKT segmentation, in `dwarp_public/ref/` with voxel sizes 1 and 2 mm isotropic.
-The non-linear registration model has been trained on skull-stripped T1-weighted images with the MNI 2 mm as target.
-
-  - Pre-trained model:
+  - Pre-trained model: `diffeo2mni.h5` is a pre-trained model for non-linear registration to the MNI template. The training procedure is the one depicted in section Training a new registration model from scratch. It has been trained on skull-strpped T1-weighted images from 100 subjects (20 UKBiobank, 20 IXI, 60 ADNI (20 HC, 20 MCI, 20 AD)), with 25 subjects for validation (5 UKBiobank, 5 IXI, 15 ADNI (5 HC, 5 MCI, 5 AD)). The MNI version is the one depicted above with voxel size 2 mm istropic. The image loss was the normalized squared local correlation coefficient (nlcc), regularization loss had a weight of 1, segmentation was leveraged during training using a Dice loss with weight 0.01.
+    
 # References
   - [1] **POLAFFINI** [[IPMI 2023 paper]](https://link.springer.com/content/pdf/10.1007/978-3-031-34048-2_47.pdf?pdf=inline%20link).
 
