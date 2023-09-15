@@ -10,30 +10,47 @@ Most of the code is in Python, deep-learning stuffs are based on Tensorflow libr
 scripts/polaffini_example.py is a basic tutorial for POLAFFINI initialization between 2 subjects whose images can be found in example_data. 
 
 # Registering a dataset to the MNI template
-The default MNI templates in **dwarp** are [ICBM 2009c Nonlinear Symmetric](https://www.mcgill.ca/bic/icbm152-152-nonlinear-atlases-version-2009) versions with voxel sizes 1 and 2 mm isotropic.
-The non-linear registration model has been trained on skull-stripped T1-weighted images with the MNI 2 mm as target.
 
 This tutorial requires an MR dataset containing homologous data of 2 types:
  - T1-weighted images, skull-stripped.
  - Segmentations, DKT protocol. Can been obtained using FreeSurfer, FastSurfer, SynthSeg...
+
+## Using a pre-trained model
+```bash
+python ~/tests/ainostics/dwarp/register.py -M <path-to-dwarp-public-directory>/diffeo2mni.h5\
+                                           -m <path-to-moving-image>\
+                                           -ms <path-to-moving-segmentation>\
+                                           -oi <path-to-moved-image>
+                                           -os <path-to-moved-segmentation>
+                                           -g mni1\
+                                           -polaffini 1 -omit_labs 2 41 -downf 2
+```
+                                           
+Use `-h` to display help.\
+`diffeo2mni.h5` is a pre-trained model depicted in section Resources. You can instead provide the path to another model trained as depicted in section Training a new registration model from scratch.
+`-g mni1` indicates that the geometry (orientation + image dimensions + voxel size) image used for resampling is the MNI template with voxel size 1 mm isotropic.\
+`-os 1` toggles the output of the moved segmentations (in one-hot encoding) so that they can be leveraged during the training of the model.
+`-polaffini 1` indicates the POLAFFINI is performed.
+`-omit_labs 2 41` will omit those labels for POLAFFINI as they are too big (whole left and right white matter) so taking their centroids is a bit meaningless.\
+
    
 ## Training a new registration model from scratch
-This is typically designed to prepare the data for a subsequent registration model training.
-### 1. POLAFFINI and data preparation ###
 
+### 1. POLAFFINI and data preparation ###
+The `dwarp_public/script/init_polaffini.py` script is designed to carry out 2 tasks:
  - Perform POLAFFINI.
  - Prepare the data for training: resizing, intensity normalization, one-hot encoding for segmentations...
     
 ```bash
 # training data
-python <path-to-dwarp_public>/scripts/init_polaffini.py -m "<path-to-directory-with-images-for-training>/*"\
-                                                        -ms "<path-to-directory-with-segmentations-for-training>/*"\
+python <path-to-dwarp_public>/scripts/init_polaffini.py -m "<path-to-training-images-directory>/*"\
+                                                        -ms "<path-to-training-segmentations-directory>/*"\
                                                         -r mni2\
                                                         -o <path-to-output-directory>/train\
                                                         -kpad 5 -os 1 -downf 2 -omit_labs 2 41
 # validation data
-python <path-to-dwarp_public>/scripts/init_polaffini.py -m "<path-to-directory-with-images-for-validation>/*"\
-                                                        -ms "<path-to-directory-with-segmentations-for-validation>/*"\
+python <path-to-dwarp_public>/scripts/init_polaffini.py -m "<path-to-validation-images-directory>/*"\
+                                                        -ms "<path-to-validation-segmentations-directory>/*"\
                                                         -r mni2\
                                                         -o <path-to-output-directory>/val\
                                                         -kpad 5 -os 1 -downf 2 -omit_labs 2 41
@@ -65,7 +82,11 @@ Use `-h` to display help.\
 ## POLAFFINI + Non-linear registration for a subject (typical use)
 This is 
 
+# Ressources
+  - MNI template: The default MNI template used here is the [ICBM 2009c Nonlinear Symmetric](https://www.mcgill.ca/bic/icbm152-152-nonlinear-atlases-version-2009) version. One can find it, together with its associated DKT segmentation, in `dwarp_public/ref/` with voxel sizes 1 and 2 mm isotropic.
+The non-linear registration model has been trained on skull-stripped T1-weighted images with the MNI 2 mm as target.
 
+  - Pre-trained model:
 # References
   - [1] **POLAFFINI** [[IPMI 2023 paper]](https://link.springer.com/content/pdf/10.1007/978-3-031-34048-2_47.pdf?pdf=inline%20link).
 
