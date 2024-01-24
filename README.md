@@ -4,7 +4,8 @@ This repository contains code for:
  - **POLAFFINI** [1]: a segmentation-based polyaffine initialization for improved non-linear image Registration. 
  - **dwarp**: tools for deep learning non-linear image registration to a template, and more...
 
-Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK, deep-learning registration uses Voxelmorph [2] core.
+Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK, deep-learning registration uses Voxelmorph [2] core.\
+It has been tested with an environment following `requirement.txt`. It should also work with more recent versions, although python>3.10 might be an issue.
 
 # Simple POLAFFINI tutorial between 2 subjects
 The `dwarp_public/scripts/polaffini_example.py` script is a basic tutorial for POLAFFINI between 2 subjects. Data for this tutorial can be found in `dwarp_public/exmaple_data`.
