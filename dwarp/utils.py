@@ -268,22 +268,6 @@ def one_hot_enc(seg, labs, segtype='itkimg', dtype=np.int8):
     return seg
 
 
-def resample_image(img, size, matO, interp):
-    """
-    Resample an image in a new grid defines by its size and orientation using a given interpolation method.
-    """
-    
-    origin, spacing, direction = decomp_matOrientation(matO)
-    resampler = sitk.ResampleImageFilter()
-    resampler.SetSize(size)
-    resampler.SetOutputOrigin(origin.tolist())
-    resampler.SetOutputDirection(direction.tolist())
-    resampler.SetOutputSpacing(spacing.tolist())   
-    resampler.SetInterpolator(interp)
-    
-    return resampler.Execute(img)
-
-
 def grid_img(volshape, omitdim=[2], spacing=5):
     g = np.zeros(volshape)
     

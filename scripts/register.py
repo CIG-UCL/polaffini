@@ -37,7 +37,7 @@ parser.add_argument('-dist', '--dist', type=str, required=False, default='center
 parser.add_argument('-omit_labs','--omit_labs', type=int, nargs='+', required=False, default=[], help='List of labels to omit. Default: []. Example: 2 41. 0 (background) is always omitted.')
 parser.add_argument('-bg_transfo','--bg_transfo', type=int, required=False, default=1, help='Compute an affine background transformation(1:yes, 0:no). Default: 1.')
 
-args = parser.parse_args()
+args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 args.polaffini = bool(args.polaffini)
 args.noinit = bool(args.noinit)
 if args.noinit:

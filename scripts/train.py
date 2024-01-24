@@ -35,7 +35,7 @@ parser.add_argument('-wr', '--weight-reg-loss', type=float, required=False, defa
 parser.add_argument('-r', '--resume', type=int, required=False, default=0, help='Resume a traning that stopped for some reason (1: yes, 0: no). Default: 0.')
 
 
-args = parser.parse_args()
+args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 args.use_seg = bool(args.use_seg)
 args.resume = bool(args.resume)
 
