@@ -7,10 +7,25 @@ This repository contains code for:
 Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK, deep-learning registration uses Voxelmorph [2] core.\
 It has been tested with an environment following `requirement.txt`. It should also work with more recent versions, although python>3.10 might be an issue.
 
-# Simple POLAFFINI tutorial between 2 subjects
-The `dwarp_public/scripts/polaffini_example.py` script is a basic tutorial for POLAFFINI between 2 subjects. Data for this tutorial can be found in `dwarp_public/exmaple_data`.
+# POLAFFINI
 
-# Registering a dataset to the MNI template
+## Small POLAFFINI tutorial
+A good way to understand how it works is to go through the following small tutorial: `dwarp_public/scripts/polaffini_example.py`.\
+This script uses the data available `dwarp_public/exmaple_data`. Extract and tweak bits to fit your needs.
+
+## POLAFFINI between 2 subjects
+
+The following script covers most usage, it performs POLAFFINI registration between two subjects.\
+It uses the moving and target segmentations to estimate the polyaffine transformation, then applies the transformation to the moving image.
+```bash
+python <path-to-dwarp_public>/scripts/polaffini_pair.py -m <path-to-moving-image>\
+                                                        -ms <path-to-moving-segmentation>\
+                                                        -rs <path-to-target-segmentation>\
+                                                        -oi <path-to-output-moved-image>
+```
+
+
+# Registering a dataset to the MNI template (or a custom one)
 
 This tutorial requires an MR dataset containing homologous data of 2 types:
  - T1-weighted images, skull-stripped.
@@ -44,17 +59,17 @@ The `dwarp_public/script/init_polaffini.py` script is designed to carry out 2 ta
     
 ```bash
 # training data
-python <path-to-dwarp_public>/scripts/init_polaffini.py -m "<path-to-training-images-directory>/*"\
-                                                        -ms "<path-to-training-segmentations-directory>/*"\
-                                                        -r mni2\
-                                                        -o <path-to-output-directory>/train\
-                                                        -kpad 5 -os 1 -downf 2 -omit_labs 2 41
+python <path-to-dwarp_public>/scripts/polaffini_set2template.py -m "<path-to-training-images-directory>/*"\
+                                                                -ms "<path-to-training-segmentations-directory>/*"\
+                                                                -r mni2\
+                                                                -o <path-to-output-directory>/train\
+                                                                -kpad 5 -os 1 -downf 2 -omit_labs 2 41
 # validation data
-python <path-to-dwarp_public>/scripts/init_polaffini.py -m "<path-to-validation-images-directory>/*"\
-                                                        -ms "<path-to-validation-segmentations-directory>/*"\
-                                                        -r mni2\
-                                                        -o <path-to-output-directory>/val\
-                                                        -kpad 5 -os 1 -downf 2 -omit_labs 2 41
+python <path-to-dwarp_public>/scripts/polaffini_set2template.py -m "<path-to-validation-images-directory>/*"\
+                                                                -ms "<path-to-validation-segmentations-directory>/*"\
+                                                                -r mni2\
+                                                                -o <path-to-output-directory>/val\
+                                                                -kpad 5 -os 1 -downf 2 -omit_labs 2 41
 ```
 Use `-h` to show more options and display help.\
 `-r mni2` indicates that the target template is the MNI with voxel size 2 mm isotropic. You can instead provide the path to a template of your choice (in this case you also need to provide the associated segmentation using `-rs`).\
