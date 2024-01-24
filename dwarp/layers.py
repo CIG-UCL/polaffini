@@ -111,7 +111,6 @@ class get_real_transfo(Layer):
 
         """
         
-        utils.develop(transfos)
         matInit = tf.map_fn(self._single_vec2mat, transfos[0], dtype=tf.float32)
         matO = transfos[1]
         matAff = tf.map_fn(self._single_matAff, transfos[2], dtype=tf.float32)

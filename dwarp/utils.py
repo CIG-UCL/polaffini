@@ -127,38 +127,6 @@ def jacobian(transfo, outDet=False, dire=None, is_shift=False):
         return jacob 
 
 
-
-def get_matOrientation(img, decomp=False):
-    
-    ndims = img.GetDimension() 
-    origin = img.GetOrigin()
-    spacing = img.GetSpacing()
-    direction = img.GetDirection()
-    
-    if decomp:
-        return (origin, spacing, direction)
-    
-    else:
-        matO = np.matmul(np.diag(spacing), np.reshape(direction,(ndims, ndims)))
-        matO = np.concatenate((matO, np.reshape(origin, (ndims,1))), axis=1)
-        matO = np.concatenate((matO, np.reshape([0]*ndims+[1], (1,ndims+1))), axis=0)
-        return matO
-  
-    
-def decomp_matOrientation(matO):
-    """
-    Decompose the orientation matrix into origin, scaling and direction.
-    """
-    
-    ndims = matO.shape[1]-1
-    mat = matO[0:ndims, 0:ndims]   
-    spacing = np.linalg.norm(mat, axis=1)
-    direction = np.squeeze(np.asarray(np.matmul(np.diag(1/spacing), mat)))
-    origin = np.squeeze(np.asarray(matO[0:ndims, ndims]))
-    
-    return (origin, spacing, direction.ravel())
-
-
 class get_real_transfo_aff:
     """
     Compute the real coordinates affine transformation based on
@@ -329,38 +297,4 @@ def grid_img(volshape, omitdim=[2], spacing=5):
         if 2 not in omitdim:
             g[:,:,k] = 1 
     return g
-    
-
-def normalize_intensities(img, wmin=0, wmax=None, omin=0, omax=1, dtype=sitk.sitkFloat32):
-    """
-    Normalize intensities of an image between 0 and 1.
-    """
-    listed = True
-    if not isinstance(img, (list, tuple)):
-        img = [img]
-        listed = False
-    
-    intensityFilter = sitk.IntensityWindowingImageFilter() 
-    intensityFilter.SetOutputMaximum(omax)
-    intensityFilter.SetOutputMinimum(omin)
-    intensityFilter.SetWindowMinimum(wmin)
-        
-    for i in range(len(img)):
-        if dtype is not None:
-            img[i] = sitk.Cast(img[i], dtype)
-    
-    if wmax is None:
-        minmaxFilter = sitk.MinimumMaximumImageFilter()
-        wmax = -np.inf
-        for i in range(len(img)):
-            minmaxFilter.Execute(img[i])
-            wmax = np.max((wmax, minmaxFilter.GetMaximum()))
-    intensityFilter.SetWindowMaximum(wmax)
-    
-    for i in range(len(img)):
-        img[i] = intensityFilter.Execute(img[i])
-        
-    if not listed:
-        img = img[0]
-    
-    return img
+   

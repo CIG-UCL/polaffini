@@ -5,7 +5,7 @@ sys.path.append(maindir)
 import glob
 import numpy as np
 import SimpleITK as sitk      
-from dwarp import utils
+from .. import utils
 import polaffini.polaffini as polaffini
 import argparse
 
@@ -15,8 +15,8 @@ parser = argparse.ArgumentParser(description="POLAFFINI segmentation-based initi
 parser.add_argument('-m', '--mov-img', type=str, required=True, help='Path to the moving images (can use *).')
 parser.add_argument('-ms', '--mov-seg', type=str, required=True, help='Path to the moving segmentations (can use *, should have same alphabetical order as the images).')
 parser.add_argument('-ma', '--mov-aux', type=str, required=False, default=None, help='Path to the moving auxiliary images (can use *, should have same alphabetical order as the images).')
-parser.add_argument('-r', '--ref-img', type=str, required=False, default=None, help="Path to the reference template image, can be 'mni1' or 'mni2")
-parser.add_argument('-rs', '--ref-seg', type=str, required=False, default=None, help="Path to the reference template segmentation, can be 'mni1' or 'mni2")
+parser.add_argument('-r', '--ref-img', type=str, required=False, default=None, help="Path to the reference template image, can be 'mni1' or 'mni2'")
+parser.add_argument('-rs', '--ref-seg', type=str, required=False, default=None, help="Path to the reference template segmentation, can be 'mni1' or 'mni2'")
 parser.add_argument('-ra', '--ref-aux', type=str, required=False, default=None, help='Path to the reference template auxiliary image.')
 # outputs
 parser.add_argument('-o', '--out-dir', type=str, required=True, help='Path to output directory.')
@@ -24,7 +24,7 @@ parser.add_argument('-ot', '--out-transfo', type=int, required=False, default=0,
 parser.add_argument('-os', '--out-seg', type=int, required=False, default=0, help='Also output moved segmentations (1:yes, 0:no). Default: 0.')
 parser.add_argument('-oa', '--out-aux', type=int, required=False, default=0, help='Also output moved auxiliary images (1:yes, 0:no). Default: 0.')
 parser.add_argument('-ohot', '--one-hot', type=int, required=False, default=1, help='Perform one-hot encoding on moved output segmentations (1:yes, 0:no). Default: 1.')
-parser.add_argument('-kpad', '--k-padding', type=int, required=False, default=5, help='Pad an image such that image size along each dimension becomes of form 2^k (k must be greater than the number of contracting levels). Default: 5.')
+parser.add_argument('-kpad', '--k-padding', type=int, required=False, default=5, help='Pad an image such that image size along each dimension  is a multiple of 2^k (k must be greater than the number of contracting levels). Default: 5.')
 # polaffini parameters
 parser.add_argument('-transfo', '--transfos-type', type=str, required=False, default='affine', help="Type of the local tranformations ('affine' or 'rigid'). Default: 'affine'.")
 parser.add_argument('-sigma', '--sigma', type=float, required=False, default=15, help='Standard deviation (in mm) for the Gaussian kernel. The higher the sigma, the smoother the output transformation. Use inf for affine transformation. Default: 15.')

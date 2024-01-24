@@ -266,9 +266,9 @@ def delaunay_triangulation(points, labs):
     
     tri = scipy.spatial.Delaunay(points)
 
-    DTlab = np.zeros_like(tri.vertices);
+    DTlab = np.zeros_like(tri.simplices);
     for i, lab in enumerate(labs):
-        DTlab[tri.vertices==i] = lab
+        DTlab[tri.simplices==i] = lab
         
     return DTlab
 
