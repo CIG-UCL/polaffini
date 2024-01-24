@@ -17,13 +17,13 @@ This tutorial requires an MR dataset containing homologous data of 2 types:
 
 ## Using a pre-trained model
 ```bash
-python ~/tests/ainostics/dwarp/register.py -M <path-to-dwarp-public-directory>/diffeo2mni.h5\
-                                           -m <path-to-moving-image>\
-                                           -ms <path-to-moving-segmentation>\
-                                           -oi <path-to-moved-image>\
-                                           -os <path-to-moved-segmentation>\
-                                           -g mni1\
-                                           -polaffini 1 -omit_labs 2 41 -downf 2
+python <path-to-dwarp_public>/register.py -M <path-to-dwarp-public-directory>/diffeo2mni.h5\
+                                          -m <path-to-moving-image>\
+                                          -ms <path-to-moving-segmentation>\
+                                          -oi <path-to-moved-image>\
+                                          -os <path-to-moved-segmentation>\
+                                          -g mni1\
+                                          -polaffini 1 -omit_labs 2 41 -downf 2
 ```
                                            
 Use `-h` to show more options and display help.\
