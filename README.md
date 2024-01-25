@@ -125,3 +125,7 @@ Use `-h` to show more options and display help.\
 
 # External repositories and references
   - [2] **Voxelmorph** [[github]](https://github.com/voxelmorph/voxelmorph) - a general purpose library for learning-based tools for alignment/registration, and more generally modelling with deformations. In addition to the code, a list of their papers is available there. Especially, if using **dwarp**, please cite Voxelmorph's TMI 2019 [[arxiv]](https://arxiv.org/abs/1809.05231), MedIA 2019 [[arxiv]](https://arxiv.org/abs/1903.03545) and MICCAI 2018 [[arxiv]](https://arxiv.org/abs/1805.04605) articles.
+
+# License
+Please read the [license](./LICENSE.md).\
+The methods implemented in the Software are protected through patents filed in various territories. For additional details regarding the patents, contact the Company at info@ainostics.com.
