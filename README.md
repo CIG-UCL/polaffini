@@ -52,8 +52,8 @@ Use `-h` to show more options and display help.\
 `diffeo2mni.h5` is a pre-trained model depicted in section Resources. You can instead provide the path to another model trained as depicted in section Training a new registration model from scratch.\
 `-g mni1` indicates that the geometry (orientation + image dimensions + voxel size) image used for resampling is the MNI template with voxel size 1 mm isotropic.\
 `-os 1` toggles the output of the moved segmentations (in one-hot encoding) so that they can be leveraged during the training of the model.\
-`-polaffini 1` indicates the POLAFFINI is performed.\
-`-omit_labs 2 41` will omit those labels for POLAFFINI as they are too big (whole left and right white matter) so taking their centroids is a bit meaningless.\
+`-polaffini 1` indicates that POLAFFINI is performed.\
+`-omit_labs 2 41` will omit those labels for POLAFFINI as they are too big (whole left and right white matter) so taking their centroids is a bit meaningless.
 
    
 ## 2. Training a new registration model from scratch
