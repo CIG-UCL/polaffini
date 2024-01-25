@@ -1,7 +1,7 @@
 # dwarp & POLAFFINI
 
 This repository contains code for:
- - **POLAFFINI** [1]: a segmentation-based polyaffine initialization for improved non-linear image Registration. 
+ - **POLAFFINI** [1]: a segmentation-based polyaffine initialization for improved non-linear image registration. 
  - **dwarp**: tools for deep learning non-linear image registration to a template, and more...
 
 Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK, deep-learning registration uses Voxelmorph [2] core.\
@@ -9,6 +9,17 @@ It has been tested with an environment following `requirement.txt`. It should al
 If you only need POLAFFFINI and do not install deep-learning stuff, you can use it as an independant module and use the requirement file in `polaffini/requirements`.
 
 # A. POLAFFINI
+POLAFFINI is an efficient initialization to improve non-linear registration compared to the usual intensity-based affine pre-alignment (e.g. with FSL FLIRT).\
+POLAFFINI uses fine-grain segmentations to estimate a polyaffine transformation which anatomically grounded, fast to compute, and has more dofs than its affine counterpart.
+
+Fine-grained segmentations can be obtained using traditional tools like:
+ - `recon-all` from FreeSurfer suite [[website]](https://surfer.nmr.mgh.harvard.edu/)
+   
+or very quickly using pre-trained deep-learning models like:
+
+ - FastSurfer [[github]](https://github.com/Deep-MI/FastSurfer)[[paper]](https://doi.org/10.1016/j.neuroimage.2020.117012)
+ - SynthSeg [`mri_synthseg` in Freesurfer][[paper]](https://doi.org/10.1016/j.media.2023.102789) which is contrast agnostic.
+
 
 ## 1. Small POLAFFINI tutorial
 A good way to understand how it works is to go through the following small tutorial: `dwarp_public/scripts/polaffini_example.py`.\
