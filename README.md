@@ -5,7 +5,8 @@ This repository contains code for:
  - **dwarp**: tools for deep learning non-linear image registration to a template, and more...
 
 Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK, deep-learning registration uses Voxelmorph [2] core.\
-It has been tested with an environment following `requirement.txt`. It should also work with more recent versions, although python>3.10 might be an issue.
+It has been tested with an environment following `requirement.txt`. It should also work with more recent versions, although python>3.10 might be an issue.\
+If you only need POLAFFFINI and do not install deep-learning stuff, you can use it as an independant module and use the requirement file in `polaffini/requirements`.
 
 # POLAFFINI
 
