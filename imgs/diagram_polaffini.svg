@@ -4,9 +4,9 @@
 <svg
    version="1.1"
    id="svg1675"
-   width="1127.7734"
-   height="580.86487"
-   viewBox="0 0 1127.7734 580.86487"
+   width="1147.7815"
+   height="600.54456"
+   viewBox="0 0 1147.7815 600.54456"
    sodipodi:docname="diagram_polaffini.svg"
    inkscape:version="1.2.2 (b0a8486, 2022-12-01)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -54,27 +54,35 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      showgrid="false"
-     inkscape:zoom="0.72975648"
-     inkscape:cx="563.88674"
-     inkscape:cy="289.82271"
-     inkscape:window-width="1390"
-     inkscape:window-height="891"
-     inkscape:window-x="1799"
-     inkscape:window-y="272"
-     inkscape:window-maximized="0"
+     inkscape:zoom="1.2970909"
+     inkscape:cx="474.5234"
+     inkscape:cy="216.25315"
+     inkscape:window-width="2560"
+     inkscape:window-height="1387"
+     inkscape:window-x="1470"
+     inkscape:window-y="25"
+     inkscape:window-maximized="1"
      inkscape:current-layer="g1683">
     <inkscape:page
        x="0"
        y="0"
        id="page1681"
-       width="1127.7734"
-       height="580.86487" />
+       width="1147.7815"
+       height="600.54456" />
   </sodipodi:namedview>
   <g
      id="g1683"
      inkscape:groupmode="layer"
      inkscape:label="Page 1"
-     transform="matrix(1.3333333,0,0,1.3333333,0,1.6521622e-5)">
+     transform="matrix(1.3333333,0,0,1.3333333,10.315991,10.538183)">
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:round;stroke-linejoin:round;stroke-dashoffset:0.566929"
+       id="rect860"
+       width="860.33612"
+       height="449.90842"
+       x="-7.4869938"
+       y="-7.6536374"
+       ry="3.3526912" />
     <g
        id="g1685">
       <g
