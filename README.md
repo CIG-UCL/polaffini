@@ -9,6 +9,10 @@ It has been tested with an environment following `requirement.txt`. It should al
 If you only need POLAFFFINI and do not install deep-learning stuff, you can use it as an independant module and use the requirement file in `polaffini/requirements`.
 
 # A. POLAFFINI
+<p align="center">
+<img src="imgs/diagram_polaffini.svg" width="70%">
+</p>
+
 POLAFFINI is an efficient initialization to improve non-linear registration compared to the usual intensity-based affine pre-alignment (e.g. with FSL FLIRT).\
 POLAFFINI uses fine-grain segmentations to estimate a polyaffine transformation which anatomically grounded, fast to compute, and has more dofs than its affine counterpart.
 
