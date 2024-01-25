@@ -8,13 +8,13 @@ Most of the code is in Python, deep-learning stuffs are based on Tensorflow libr
 It has been tested with an environment following `requirement.txt`. It should also work with more recent versions, although python>3.10 might be an issue.\
 If you only need POLAFFFINI and do not install deep-learning stuff, you can use it as an independant module and use the requirement file in `polaffini/requirements`.
 
-# POLAFFINI
+# A. POLAFFINI
 
-## Small POLAFFINI tutorial
+## 1. Small POLAFFINI tutorial
 A good way to understand how it works is to go through the following small tutorial: `dwarp_public/scripts/polaffini_example.py`.\
 This script uses the data available `dwarp_public/exmaple_data`. Extract and tweak bits to fit your needs.
 
-## POLAFFINI between 2 subjects
+## 2. POLAFFINI between 2 subjects
 
 The following script covers most usage, it performs POLAFFINI registration between two subjects.\
 It uses the moving and target segmentations to estimate the polyaffine transformation, then applies the transformation to the moving image.
@@ -25,14 +25,19 @@ python <path-to-dwarp_public>/scripts/polaffini_pair.py -m <path-to-moving-image
                                                         -oi <path-to-output-moved-image>
 ```
 
+## 3. POLAFFINI of a dataset onto a template
 
-# Registering a dataset to the MNI template (or a custom one)
+The script `/scripts/polaffini_set2template.py` allows to perform POLAFFINI on a set of subjects as well as various data preparation such as intensity normalization, one-hot encoding of segmentations... It can be typically used to prepare the data to be fed to a deep-learning model during its training.\
+See Section B.2.a. for an example.
+
+
+# B. Deep-learning registration of a dataset onto the MNI template (or a custom one)
 
 This tutorial requires an MR dataset containing homologous data of 2 types:
  - T1-weighted images, skull-stripped.
  - Segmentations, DKT protocol. Can been obtained using FreeSurfer, FastSurfer, SynthSeg...
 
-## Using a pre-trained model
+## 1. Using a pre-trained model
 ```bash
 python <path-to-dwarp_public>/register.py -M <path-to-dwarp-public-directory>/diffeo2mni.h5\
                                           -m <path-to-moving-image>\
@@ -51,9 +56,9 @@ Use `-h` to show more options and display help.\
 `-omit_labs 2 41` will omit those labels for POLAFFINI as they are too big (whole left and right white matter) so taking their centroids is a bit meaningless.\
 
    
-## Training a new registration model from scratch
+## 2. Training a new registration model from scratch
 
-### 1. POLAFFINI and data preparation
+### a. POLAFFINI and data preparation
 The `dwarp_public/script/init_polaffini.py` script is designed to carry out 2 tasks:
  - Perform POLAFFINI.
  - Prepare the data for training: resizing, intensity normalization, one-hot encoding for segmentations...
@@ -83,7 +88,7 @@ The output directories will be organized as follow:\
 &ensp; └ transfo (if `-ot 1`) - folder containing transformations (an affine transformation and a polyaffine one in SVF form)
 
 
-### 2. Model training ###
+### b. Model training ###
 ```
 python <path-to-dwarp_public>/scripts/train.py -o <path-to-output-directory>/model.h5\
                                                -e 1000\
