@@ -128,4 +128,4 @@ Use `-h` to show more options and display help.\
 
 # License
 Please read the [license](./LICENSE.md).\
-The methods implemented in the Software are protected through patents filed in various territories. For additional details regarding the patents, contact the Company at info@ainostics.com.
+In particular, some methods (POLAFFINI) implemented in this repository are protected through patents filed in various territories. For additional details regarding the patents, contact info@ainostics.com.
