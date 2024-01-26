@@ -7,6 +7,7 @@ import numpy as np
 import SimpleITK as sitk
 import tensorflow as tf      
 tf.config.experimental.set_visible_devices([], 'GPU')    
+import utils
 import dwarp
 import polaffini.polaffini as polaffini
 import argparse
@@ -65,16 +66,16 @@ ndims = len(inshape)
 matO = np.asmatrix(model.config.params['orientation'])
 origin, spacing, direction = dwarp.utils.decomp_matOrientation(matO)
 
-moving = sitk.ReadImage(args.mov_img)
+moving = utils.imageIO(args.mov_img).read()
 
 if args.polaffini or args.out_seg is not None:  
-    moving_seg = sitk.ReadImage(args.mov_seg)
+    moving_seg = utils.imageIO(args.mov_seg).read()
     
 #%% POLAFFINI initialization
 
 if args.polaffini:
     print('Initializing through POLAFFINI segmentation-based...')
-    ref_seg = sitk.ReadImage(args.ref_seg) 
+    ref_seg = utils.imageIO(args.ref_seg).read()
     init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=moving_seg, 
                                                       ref_seg=ref_seg,
                                                       sigma=args.sigma,
@@ -137,7 +138,7 @@ if args.out_img is not None or args.out_seg is not None or args.out_transfo is n
         geom_file = os.path.join(maindir, 'refs', 'mni_brain.nii.gz')
     else:
         geom_file = args.geom
-    geom = sitk.ReadImage(geom_file)
+    geom = utils.imageIO(geom_file).read()
     resampler.SetSize(geom.GetSize())
     resampler.SetOutputOrigin(geom.GetOrigin())
     resampler.SetOutputDirection(geom.GetDirection())
@@ -152,20 +153,20 @@ if args.out_img is not None or args.out_seg is not None or args.out_transfo is n
 if args.out_img is not None or args.out_seg is not None or args.out_transfo is not None or args.out_svf is not None:
     print('Writing output files...')
     if args.out_img is not None:
-        sitk.WriteImage(moved, args.out_img) 
+        utils.imageIO(args.out_img).write(moved) 
     if args.out_seg is not None:
-        sitk.WriteImage(moved_seg, args.out_seg) 
+        utils.imageIO(args.out_seg).write(moved_seg) 
     if args.out_transfo is not None:
         tr2disp = sitk.TransformToDisplacementFieldFilter()
         tr2disp.SetReferenceImage(geom)
-        sitk.WriteImage(tr2disp.Execute(transfo_full), args.out_transfo)
+        utils.imageIO(tr2disp.Execute(args.out_transfo)).write(transfo_full)
     if args.out_svf is not None:
         svf = dwarp.utils.get_real_field(svf, matO)
         svf = sitk.GetImageFromArray(svf[0, ...], isVector=True)
         svf.SetDirection(direction)
         svf.SetSpacing(spacing)
         svf.SetOrigin(origin)
-        sitk.WriteImage(svf, args.out_svf)
+        utils.imageIO(args.out_svf).write(svf)
         
 print('\n')    
 

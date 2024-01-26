@@ -1,22 +1,22 @@
-dwarp_public_path = '/Users/alegouhy/dev/dwarp_public'   # put here the path to dwarp_public (where you cloned the repo)
+dwarp_public_path = ''   # put here the path to dwarp_public (where you cloned the repo)
 
-import sys
 if dwarp_public_path == '':
-    sys.exit('modify the path to dwrp_public in line 1')
-sys.path.append(dwarp_public_path)
-
+    sys.exit('modify the path to dwarp_public in line 1')
 import os
+os.chdir(dwarp_public_path)
+
+import utils
 import polaffini.polaffini as polaffini
 import SimpleITK as sitk
 import time
 
-example_data_path = dwarp_public_path + os.sep + 'example_data' + os.sep
-
 #%% POLAFFINI matching using segmentations
 
-moving_seg = sitk.ReadImage(example_data_path + 'moving_dkt.nii.gz')
-target_seg = sitk.ReadImage(example_data_path + 'target_dkt.nii.gz')
+# Loading the segmentations
+moving_seg = utils.imageIO('example_data' + os.sep + 'moving_dkt.nii.gz').read()
+target_seg = utils.imageIO('example_data' + os.sep + 'target_dkt.nii.gz').read()
 
+# Peforming POLAFFINI estimation
 t = time.time()
 init_aff, polyAff_svf = polaffini.estimateTransfo(moving_seg, 
                                                   target_seg, 
@@ -34,21 +34,19 @@ polaff_inv = polaffini.get_full_transfo(init_aff, polyAff_svf, invert=True)
 
 resampler = sitk.ResampleImageFilter()
 resampler.SetInterpolator(sitk.sitkLinear)
-moving_img = sitk.ReadImage(example_data_path + 'moving_t1.nii.gz')
-target_img = sitk.ReadImage(example_data_path + 'target_t1.nii.gz')
+moving_img = utils.imageIO('example_data' + os.sep + 'moving_t1.nii.gz').read()
+target_img = utils.imageIO('example_data' + os.sep + 'target_t1.nii.gz').read()
 
 # moving to target
 resampler.SetReferenceImage(target_img)  
 resampler.SetTransform(polaff)  
 moved_img = resampler.Execute(moving_img)
-sitk.WriteImage(moved_img, example_data_path + 'moving2target_t1.nii.gz')
-polaffini.write_dispField(polaff, example_data_path + 'moving2target_disp.nii.gz')
+utils.imageIO('example_data' + os.sep + 'moving2target_t1.nii.gz').write(moved_img)
+polaffini.write_dispField(polaff, 'example_data' + os.sep + 'moving2target_disp.nii.gz')
 
 # target to moving
 resampler.SetReferenceImage(moving_img) 
 resampler.SetTransform(polaff_inv)  
 moved_img = resampler.Execute(target_img)
-sitk.WriteImage(moved_img,example_data_path + 'target2moving_t1.nii.gz')
-
-
+utils.imageIO('example_data' + os.sep + 'target2moving_t1.nii.gz').write(moved_img)
 

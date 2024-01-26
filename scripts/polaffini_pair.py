@@ -2,9 +2,10 @@ import os
 import sys
 maindir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(maindir)
-import SimpleITK as sitk      
+import SimpleITK as sitk   
+import argparse   
+import utils
 import polaffini.polaffini as polaffini
-import argparse
 
 parser = argparse.ArgumentParser(description="POLAFFINI segmentation-based initialization for non-linear registration.")
 
@@ -37,8 +38,8 @@ elif args.ref_seg == "mni1":
     args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt.nii.gz')
 
 
-mov_seg = sitk.ReadImage(args.mov_seg)
-ref_seg = sitk.ReadImage(args.ref_seg)
+mov_seg = utils.imageIO(args.mov_seg).read()
+ref_seg = utils.imageIO(args.ref_seg).read()
 
 init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=mov_seg, 
                                                   ref_seg=ref_seg,
@@ -58,25 +59,25 @@ resampler.SetTransform(transfo)
 if args.out_img is not None:
     if args.mov_img is None:
         sys.exit('Need a moving image.')
-    mov_img = sitk.ReadImage(args.mov_img)
+    mov_img = utils.imageIO(args.mov_img).read()
     resampler.SetInterpolator(sitk.sitkLinear)
     mov_img = resampler.Execute(mov_img)
-    sitk.WriteImage(mov_img, args.out_img)
+    utils.imageIO(args.out_img).write(mov_img)
 
 if args.out_seg is not None:
     resampler.SetInterpolator(sitk.sitkNearestNeighbor)
     mov_seg = resampler.Execute(mov_seg)
-    sitk.WriteImage(mov_seg, args.out_seg)
+    utils.imageIO(args.out_seg).write(mov_seg)
     
 if args.out_aff_transfo is not None:      
     sitk.WriteTransform(init_aff, args.out_aff_transfo)
 
 if args.out_poly_transfo is not None:  
-    sitk.WriteImage(polyAff_svf, args.out_poly_transfo)
+    utils.imageIO(args.out_poly_transfo).write(polyAff_svf)
         
 if args.out_transfo is not None:
     tr2disp = sitk.TransformToDisplacementFieldFilter()
     tr2disp.SetReferenceImage(polyAff_svf)
-    sitk.WriteImage(tr2disp.Execute(transfo), args.out_transfo)
+    utils.imageIO(args.out_transfo).write(tr2disp.Execute(transfo))
 
 

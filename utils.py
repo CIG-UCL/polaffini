@@ -1,7 +1,64 @@
 import numpy as np
 import SimpleITK as sitk
+import os
+import pathlib
+import tempfile
+import nibabel as nib
 
+class imageIO:
+    # SimpleITK is preferred to nibabel as the former has shown to be more reliable for orientation matrices.
+    # Although, conversion with nibabel is proposed for formats not supported by SimpleITK.
     
+    def __init__(self, filename, convertvia='nii', tmpdir=None):
+        self.convertvia = convertvia
+        if convertvia is not None:
+            if convertvia[0] != '.':
+                self.convertvia = '.' + convertvia
+        self.tmpdir = tmpdir
+        self.filename = pathlib.Path(filename).expanduser().as_posix()    
+        _, self.ext = self._splitext()
+        self.is_mgx = self.ext in ('.mgh', '.mgz')
+        
+    def read(self):
+        if self.is_mgx:
+            tmpfile = self._get_tmpfile()
+            self._convert(self.filename, tmpfile)
+            img = sitk.ReadImage(tmpfile)
+            os.remove(tmpfile)
+        else:
+            img = sitk.ReadImage(self.filename)
+        return img
+    
+    def write(self, img):
+        if self.is_mgx is not None:
+            tmpfile = self._get_tmpfile()
+            sitk.WriteImage(img, tmpfile)
+            self._convert(tmpfile, self.filename)
+            os.remove(tmpfile)
+        else:
+            sitk.Write(img, self.filename)
+     
+    def _get_tmpfile(self):
+        if self.tmpdir is None:
+            tmpdir, _ = os.path.split(self.filename)
+        else:
+            tmpdir = pathlib.Path(self.tmpdir).expanduser().as_posix()
+        tmpfile = tempfile.NamedTemporaryFile(dir=tmpdir, prefix='tmp_')
+        tmpfile = tmpfile.name + self.convertvia
+        return tmpfile
+        
+    def _convert(self, filename1, filename2):
+        img = nib.load(filename1)
+        nib.save(img, filename2)
+
+    def _splitext(self):     
+        filename, ext = os.path.splitext(self.filename)
+        if ext == '.gz':
+            filename, ext = os.path.splitext(self.filename)
+            ext = ext + '.gz'       
+        return filename, ext
+    
+
 def pad_image(img, k=5, outSize=None, bg_val=0):
     """
     Pad an image such that image size along each dimension is a multiple of 2^k.
