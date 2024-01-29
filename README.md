@@ -10,7 +10,7 @@ If you only need POLAFFFINI and do not install deep-learning stuff, you can use 
 
 # A. POLAFFINI
 <p align="center">
-<img src="imgs/diagram_polaffini.svg" width="70%">
+<img src="imgs/diagram_polaffini.svg" width="85%">
 </p>
 
 POLAFFINI is an efficient initialization to improve non-linear registration compared to the usual intensity-based affine pre-alignment (e.g. with FSL FLIRT).\
