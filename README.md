@@ -53,6 +53,7 @@ This tutorial requires an MR dataset containing homologous data of 2 types:
  - Segmentations, DKT protocol. Can been obtained using FreeSurfer, FastSurfer, SynthSeg...
 
 ## 1. Using a pre-trained model
+:warning: `diffeo2mni.h5` is not ready yet. Pre-trained models will be added soon.
 ```bash
 python <path-to-dwarp_public>/register.py -M <path-to-dwarp-public-directory>/diffeo2mni.h5\
                                           -m <path-to-moving-image>\
