@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "polaffini"
+version = "0.0.1"
+requires-python = ">=3.9"
+dependencies = [
+             "numpy==1.24.3",
+             "scipy==1.12.0",
+             "SimpleITK==2.3.1",
+             "nibabel==5.2.0"
+]
+
+[project.optional-dependencies]
+dwarp = [
+      "matplotlib==3.7.2",
+      "neurite==0.2",
+      "pandas==2.0.3",
+      "tensorflow==2.15.0",
+      "voxelmorph==0.2"
+]
+
+[tool.setuptools]
+packages = [
+         "polaffini",
+         "dwarp"
+]
+
+[project.scripts]
+polaffini = "scripts.polaffini_pair:polaffini_pair"
