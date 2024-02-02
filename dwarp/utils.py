@@ -197,27 +197,6 @@ class get_real_transfo_aff:
         return matO
    
     
-def get_real_field(field, matO, nobatch=False):
-    """
-    Compute the real coordinates affine transformation based on
-        - A deformation field in voxelic coordinates. (nb,nx,ny,nz,3)
-        - An orientation matrix.
-    """
-    
-    extdims = len(field.shape) - 2
-    ndims = extdims
-    if nobatch:
-        ndims += 1
-        
-    field = np.expand_dims(field, -1)
-    linearPartO = np.expand_dims(matO[:-1,:-1], list(range(extdims+1))) 
-    perm = np.expand_dims(np.eye(ndims)[::-1], list(range(extdims+1))) # permut dimensions from voxelmorph to itk
-    
-    field_real = tf.matmul(linearPartO, tf.matmul(perm,field))     
-    
-    return field_real[..., 0]
-    
-    
 def pad_image(img, k=5, outSize=None, bg_val=0):
     """
     Pad an image such that image size along each dimension becomes of form 2^k.
