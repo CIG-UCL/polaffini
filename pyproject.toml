@@ -4,6 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "polaffini"
+authors = [
+        {name = "AINOSTICS Ltd.", email = "info@ainostics.com"},
+        {name = "Antoine Leghouy"},
+        {name = "Ross Callaghan"}
+]
+readme = "README.md"
+license = {file = "LICENSE.md"}
 version = "0.0.1"
 requires-python = ">=3.9"
 dependencies = [
@@ -12,6 +19,9 @@ dependencies = [
              "SimpleITK==2.3.1",
              "nibabel==5.2.0"
 ]
+[project.urls]
+Homepage = "https://ainostics.com"
+Repository = "https://github.com/CIG-UCL/polaffini.git"
 
 [project.optional-dependencies]
 dwarp = [
