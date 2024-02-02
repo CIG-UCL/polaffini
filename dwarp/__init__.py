@@ -1,7 +1,7 @@
 try:
 	import tensorflow
 except ImportError:
-	raise ImportError('Please install tensorflow')
+	raise ImportError('Please install tensorflow. If you pip installed polaffini try `pip install -U polaffini[dwarp]`')
 
 from . import generators
 from . import utils
