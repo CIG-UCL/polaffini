@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "polaffini"
 authors = [
         {name = "AINOSTICS Ltd.", email = "info@ainostics.com"},
-        {name = "Antoine Leghouy"},
+        {name = "Antoine Legouhy"},
         {name = "Ross Callaghan"}
 ]
 readme = "README.md"
