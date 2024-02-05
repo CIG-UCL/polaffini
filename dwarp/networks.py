@@ -130,7 +130,7 @@ class aff2atlas(ne.modelio.LoadableModel):
         """
         Predicts the transform from src to atlas.
         """
-        return self.get_registration_model().predict(src)
+        return self.get_registration_model().predict(src, verbose=0)
 
     def apply_transform(self, src, img, interp_method='linear'):
         """
@@ -139,7 +139,7 @@ class aff2atlas(ne.modelio.LoadableModel):
         warp_model = self.get_registration_model()
         img_input = tf.keras.Input(shape=img.shape[1:])
         y_img = layers.SpatialTransformer(interp_method=interp_method)([img_input, warp_model.output[1]])
-        return tf.keras.Model(warp_model.inputs + [img_input], y_img).predict([src, img])
+        return tf.keras.Model(warp_model.inputs + [img_input], y_img).predict([src, img], verbose=0)
     
     
     
@@ -250,7 +250,7 @@ class diffeo2atlas(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDens
         """
         Predicts the transform from src to atlas.
         """
-        return self.get_registration_model().predict(src)
+        return self.get_registration_model().predict(src, verbose=0)
 
     def apply_transform(self, src, img, interp_method='linear'):
         """
@@ -259,7 +259,7 @@ class diffeo2atlas(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDens
         warp_model = self.get_registration_model()
         img_input = tf.keras.Input(shape=img.shape[1:])
         y_img = layers.SpatialTransformer(interp_method=interp_method)([img_input, warp_model.output[1]])
-        return tf.keras.Model(warp_model.inputs + [img_input], y_img).predict([src, img])
+        return tf.keras.Model(warp_model.inputs + [img_input], y_img).predict([src, img], verbose=0)
 
         
 
@@ -416,7 +416,7 @@ class sudistoc(ne.modelio.LoadableModel):
         """
         Predicts the transform from src to trg tensors.
         """
-        return self.register().predict([src, trg])
+        return self.register().predict([src, trg], verbose=0)
 
     def apply_corr(self, in_img1, in_img2, img1, img2):
 
@@ -429,7 +429,7 @@ class sudistoc(ne.modelio.LoadableModel):
         img1_corr = layers.JacobianMultiplyIntensities(indexing='ij')([img1_corr, warp_model.output[0]])
         img2_corr = layers.JacobianMultiplyIntensities(indexing='ij')([img2_corr, warp_model.output[1]])
                 
-        return tf.keras.Model(warp_model.inputs + [img1_input, img2_input], [img1_corr, img2_corr]).predict([in_img1, in_img2, img1, img2])
+        return tf.keras.Model(warp_model.inputs + [img1_input, img2_input], [img1_corr, img2_corr]).predict([in_img1, in_img2, img1, img2], verbose=0)
 
         
 class encoder(tf.keras.Model): # Similar code to voxelmorph's Unet but truncated to only keep the encoder part.

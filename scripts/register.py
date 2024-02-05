@@ -59,12 +59,12 @@ if args.ref_seg == "mni2":
 elif args.ref_seg == "mni1":
     args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt.nii.gz')
 
-model = dwarp.networks.diffeo2atlas_net.load(args.model)
+model = dwarp.networks.diffeo2atlas.load(args.model)
 
 inshape = model.output_shape[0][1:-1]
 ndims = len(inshape)
 matO = np.asmatrix(model.config.params['orientation'])
-origin, spacing, direction = dwarp.utils.decomp_matOrientation(matO)
+origin, spacing, direction = utils.decomp_matOrientation(matO)
 
 moving = utils.imageIO(args.mov_img).read()
 
@@ -74,7 +74,7 @@ if args.polaffini or args.out_seg is not None:
 #%% POLAFFINI initialization
 
 if args.polaffini:
-    print('Initializing through POLAFFINI segmentation-based...')
+    print('Initializing through POLAFFINI...')
     ref_seg = utils.imageIO(args.ref_seg).read()
     init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=moving_seg, 
                                                       ref_seg=ref_seg,
@@ -94,7 +94,7 @@ if args.polaffini:
     resampler.SetTransform(transfo) 
     resampler.SetSize(inshape)
     mov = resampler.Execute(moving)
-    mov = dwarp.utils.normalize_intensities(mov)
+    mov = utils.normalize_intensities(mov)
     
     resampler.SetInterpolator(sitk.sitkNearestNeighbor)
     mov_seg = resampler.Execute(moving_seg)
@@ -102,13 +102,13 @@ if args.polaffini:
     transfo_full = sitk.CompositeTransform(transfo)
 else:
     if not args.noinit:
-        mov = dwarp.utils.resample_image(moving, inshape, matO, sitk.sitkLinear) 
-        mov = dwarp.utils.normalize_intensities(mov)
+        mov = utils.resample_image(moving, inshape, matO, sitk.sitkLinear) 
+        mov = utils.normalize_intensities(mov)
     else:
         mov = moving
 
     transfo_full = sitk.CompositeTransform(ndims)
-     
+   
 mov = sitk.GetArrayFromImage(mov)[np.newaxis,..., np.newaxis]
 
 #%% Regsitration through model
@@ -120,7 +120,7 @@ moved, field, svf = model.register(mov)
 
 print('Composing transformations...')
 
-field = dwarp.utils.get_real_field(field, matO)
+field = utils.get_real_field(field, matO)
 field = sitk.GetImageFromArray(field[0, ...], isVector=True)
 field.SetDirection(direction)
 field.SetSpacing(spacing)
@@ -161,14 +161,14 @@ if args.out_img is not None or args.out_seg is not None or args.out_transfo is n
         tr2disp.SetReferenceImage(geom)
         utils.imageIO(tr2disp.Execute(args.out_transfo)).write(transfo_full)
     if args.out_svf is not None:
-        svf = dwarp.utils.get_real_field(svf, matO)
+        svf = utils.get_real_field(svf, matO)
         svf = sitk.GetImageFromArray(svf[0, ...], isVector=True)
         svf.SetDirection(direction)
         svf.SetSpacing(spacing)
         svf.SetOrigin(origin)
         utils.imageIO(args.out_svf).write(svf)
         
-print('\n')    
+print('boom\n')    
 
 
 
