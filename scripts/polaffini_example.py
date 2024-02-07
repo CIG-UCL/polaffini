@@ -1,5 +1,6 @@
 dwarp_public_path = ''   # put here the path to dwarp_public (where you cloned the repo)
 
+import sys
 if dwarp_public_path == '':
     sys.exit('modify the path to dwarp_public in line 1')
 import os
