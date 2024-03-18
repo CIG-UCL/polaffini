@@ -1,6 +1,6 @@
 import numpy as np
 import SimpleITK as sitk        
-from . import utils
+import utils
 
 def mov2atlas_res(mov_files, 
                   ref_file,
