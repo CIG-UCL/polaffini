@@ -112,14 +112,22 @@ else:
    
 mov = sitk.GetArrayFromImage(mov)[np.newaxis,..., np.newaxis]
 
-#%% Regsitration through model
 
+
+#%% Regsitration through model, transformations composition
+
+
+resampler = sitk.ResampleImageFilter()
+resampler.SetOutputOrigin(origin)   
+resampler.SetOutputSpacing(spacing)
+resampler.SetOutputDirection(direction)
+resampler.SetSize(inshape)
+    
 for _ in range(args.nb_passes):
     
     print('Registering through model...')
-    mov, field, svf = model.register(mov)
+    _, field, svf = model.register(mov)
 
-#%% Transformations composition and resampling
 
     print('Composing transformations...')
     
@@ -132,7 +140,14 @@ for _ in range(args.nb_passes):
     
     transfo_full.AddTransform(field)
 
+    resampler.SetTransform(transfo_full) 
+    mov = resampler.Execute(moving)
+    mov = sitk.GetArrayFromImage(mov)[np.newaxis,..., np.newaxis]
+    
 
+#%% Final resampling and write ouput files
+
+    
 if args.out_img is not None or args.out_seg is not None or args.out_transfo is not None:
     print('Resampling...')
     resampler = sitk.ResampleImageFilter()
