@@ -17,6 +17,7 @@ print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 parser = argparse.ArgumentParser(description="")
 # model
 parser.add_argument('-M', '--model', type=str, required=True, help="Path to the model (.h5).")
+parser.add_argument('-np', '--nb-passes', type=int, required=False, default=1, help="Number of passes. Default: 1.")
 # input files
 parser.add_argument('-m', '--mov-img', type=str, required=True, help='Path to the moving image.')
 parser.add_argument('-g', '--geom', type=str, required=False, default='mni1', help="Path to geometry image for resampling, can be 'mni1' or 'mni2'. Default: same as ref for training.")
@@ -113,21 +114,24 @@ mov = sitk.GetArrayFromImage(mov)[np.newaxis,..., np.newaxis]
 
 #%% Regsitration through model
 
-print('Registering through model...')
-moved, field, svf = model.register(mov)
+for _ in range(args.nb_passes):
+    
+    print('Registering through model...')
+    mov, field, svf = model.register(mov)
 
 #%% Transformations composition and resampling
 
-print('Composing transformations...')
+    print('Composing transformations...')
+    
+    field = utils.get_real_field(field, matO)
+    field = sitk.GetImageFromArray(field[0, ...], isVector=True)
+    field.SetDirection(direction)
+    field.SetSpacing(spacing)
+    field.SetOrigin(origin)
+    field = sitk.DisplacementFieldTransform(field)
+    
+    transfo_full.AddTransform(field)
 
-field = utils.get_real_field(field, matO)
-field = sitk.GetImageFromArray(field[0, ...], isVector=True)
-field.SetDirection(direction)
-field.SetSpacing(spacing)
-field.SetOrigin(origin)
-field = sitk.DisplacementFieldTransform(field)
-
-transfo_full.AddTransform(field)
 
 if args.out_img is not None or args.out_seg is not None or args.out_transfo is not None:
     print('Resampling...')
