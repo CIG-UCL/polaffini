@@ -122,6 +122,7 @@ resampler.SetOutputOrigin(origin)
 resampler.SetOutputSpacing(spacing)
 resampler.SetOutputDirection(direction)
 resampler.SetSize(inshape)
+resampler.SetInterpolator(sitk.sitkLinear)
     
 for _ in range(args.nb_passes):
     
@@ -142,6 +143,7 @@ for _ in range(args.nb_passes):
 
     resampler.SetTransform(transfo_full) 
     mov = resampler.Execute(moving)
+    mov = utils.normalize_intensities(mov)
     mov = sitk.GetArrayFromImage(mov)[np.newaxis,..., np.newaxis]
     
 
