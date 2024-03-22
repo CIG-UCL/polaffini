@@ -41,7 +41,9 @@ def estimateTransfo(mov_seg, ref_seg,
     polyAff_svf : ITK image
         SVF form of the polyaffine transformation.
     """
-
+    
+    sigma = float(sigma)
+    
     ref_seg = sitk.Cast(ref_seg, sitk.sitkInt64)
     
     ndims = ref_seg.GetDimension()

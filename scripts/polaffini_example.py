@@ -1,4 +1,4 @@
-dwarp_public_path = '/scratch0/NOT_BACKED_UP/alegouhy/dev/dwarp_public/'   # put here the path to dwarp_public (where you cloned the repo)
+dwarp_public_path = ''   # put here the path to dwarp_public (where you cloned the repo)
 
 import sys
 if dwarp_public_path == '':
@@ -38,12 +38,14 @@ f, axs = plt.subplots(1,2); f.dpi = 200
 axs[0].axis('off'); axs[1].axis('off');
 sl_sag = 85
 axs[0].set_title('before'); axs[1].set_title('after')
-plt.suptitle('POLAFFINI', y=0.85)
+plt.suptitle('target - moving', y=0.87)
 
 moving_img = utils.imageIO('example_data' + os.sep + 'moving_t1.nii.gz').read()
 target_img = utils.imageIO('example_data' + os.sep + 'target_t1.nii.gz').read()
 axs[0].imshow(sitk.GetArrayFromImage(target_img)[:,:,sl_sag]
-            - sitk.GetArrayFromImage(sitk.Resample(moving_img, target_img))[:,:,sl_sag], origin='lower')
+            - sitk.GetArrayFromImage(sitk.Resample(moving_img, target_img))[:,:,sl_sag],
+              origin='lower', cmap=plt.cm.twilight, vmin=-2500,vmax=2500)
+
 
 resampler = sitk.ResampleImageFilter()
 resampler.SetInterpolator(sitk.sitkLinear)
@@ -55,7 +57,8 @@ moved_img = resampler.Execute(moving_img)
 utils.imageIO('example_data' + os.sep + 'moving2target_t1.nii.gz').write(moved_img)
 polaffini.write_dispField(polaff, 'example_data' + os.sep + 'moving2target_disp.nii.gz')
 axs[1].imshow(sitk.GetArrayFromImage(target_img)[:,:,sl_sag]
-            - sitk.GetArrayFromImage(moved_img)[:,:,sl_sag], origin='lower')
+            - sitk.GetArrayFromImage(moved_img)[:,:,sl_sag],
+              origin='lower', cmap=plt.cm.twilight, vmin=-2500,vmax=2500)
 
 # target to moving
 resampler.SetReferenceImage(moving_img) 
