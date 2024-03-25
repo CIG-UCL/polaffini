@@ -11,12 +11,14 @@ def polaffini_pair():
     parser = argparse.ArgumentParser(description="POLAFFINI segmentation-based initialization for non-linear registration.")
 
     # inputs
-    parser.add_argument('-ms', '--mov-seg', type=str, required=True, help='Path to the moving segmentations (can use *, should have same alphabetical order as the images).')
+    parser.add_argument('-ms', '--mov-seg', type=str, required=True, help='Path to the moving segmentation.')
     parser.add_argument('-rs', '--ref-seg', type=str, required=True, help="Path to the reference segmentation, can be 'mni1' or 'mni2'")
-    parser.add_argument('-m', '--mov-img', type=str, required=False, default=None, help='Path to the moving images (can use *).')
+    parser.add_argument('-m', '--mov-img', type=str, required=False, default=None, help='Path to the moving image.')
+    parser.add_argument('-ma', '--mov-aux', type=str, required=False, default=None, help='Path to the moving auxiliary image.')
     # outputs
     parser.add_argument('-oi', '--out-img', type=str, required=False, default=None, help='Path to output image.')
     parser.add_argument('-os', '--out-seg', type=str, required=False, default=None, help='Path to output moved segmentation.')
+    parser.add_argument('-oa', '--out-aux', type=str, required=False, default=None, help='Path to output moved auxiliary image.')
     parser.add_argument('-ot', '--out-transfo', type=str, required=False, default=None, help='Path to output full transformations in diffeo form.')
     parser.add_argument('-ota', '--out-aff-transfo', type=str, required=False, default=None, help='Path to output affine part of transformation (.txt)')
     parser.add_argument('-otp', '--out-poly-transfo', type=str, required=False, default=None, help='Path to output polyaffine part of the transformation in SVF form.')
@@ -65,6 +67,14 @@ def polaffini_pair():
         mov_img = resampler.Execute(mov_img)
         utils.imageIO(args.out_img).write(mov_img)
 
+    if args.out_aux is not None:
+        if args.mov_aux is None:
+            sys.exit('Need an auxiliary moving image.')
+        mov_aux = utils.imageIO(args.mov_aux).read()
+        resampler.SetInterpolator(sitk.sitkLinear)
+        mov_aux = resampler.Execute(mov_aux)
+        utils.imageIO(args.out_aux).write(mov_aux)
+        
     if args.out_seg is not None:
         resampler.SetInterpolator(sitk.sitkNearestNeighbor)
         mov_seg = resampler.Execute(mov_seg)
