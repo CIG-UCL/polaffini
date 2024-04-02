@@ -120,11 +120,11 @@ def get_matOrientation(img, decomp=False):
         return (origin, spacing, direction)
     
     else:
-        matO = np.matmul(np.diag(spacing), np.reshape(direction,(ndims, ndims)))
+        matO = np.matmul(np.reshape(direction,(ndims, ndims)), np.diag(spacing))
         matO = np.concatenate((matO, np.reshape(origin, (ndims,1))), axis=1)
         matO = np.concatenate((matO, np.reshape([0]*ndims+[1], (1,ndims+1))), axis=0)
         return matO
-    
+  
     
 def decomp_matOrientation(matO):
     """
@@ -133,11 +133,12 @@ def decomp_matOrientation(matO):
     
     ndims = matO.shape[1]-1
     mat = matO[0:ndims, 0:ndims]   
-    spacing = np.linalg.norm(mat, axis=1)
-    direction = np.squeeze(np.asarray(np.matmul(np.diag(1/spacing), mat)))
+    spacing = np.linalg.norm(mat, axis=0)
+    direction = np.squeeze(np.asarray(np.matmul(mat, np.diag(1/spacing))))
     origin = np.squeeze(np.asarray(matO[0:ndims, ndims]))
     
     return (origin, spacing, direction.ravel())
+
 
 
 def resample_image(img, size, matO, interp):
