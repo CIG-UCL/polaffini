@@ -5,8 +5,15 @@ This repository contains code for:
  - **dwarp**: tools for deep learning non-linear image registration to a template, and more...
 
 Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK (conversion through nibabel for mgh/mgz files), deep-learning registration uses Voxelmorph [2] core.\
-It has been tested with an environment following `requirement.txt`. It should also work with more recent versions, although python>3.10 might be an issue.\
-If you only need POLAFFFINI and do not install deep-learning stuff, you can use it as an independant module and use the requirement file in `polaffini/requirements`.
+
+# Installation
+
+Installation can be done classically through git clone and installing the dependancies in `requirement.txt`. If you only need POLAFFFINI and do not install deep-learning stuff, you can use it as an independant module and use the requirement file in `polaffini/requirements`.
+
+Alternatively, one can use a pip command to do everything in one go:
+ - For **POLAFFINI** only: `pip install git+https://github.com/CIG-UCL/polaffini.git`
+ - For **dwarp** also: `pip install "polaffini[dwarp] @ git+https://github.com/CIG-UCL/polaffini.git"`
+   
 
 # A. POLAFFINI
 <p align="center">
@@ -24,7 +31,7 @@ or very quickly using pre-trained deep-learning models like:
  - FastSurfer [[github]](https://github.com/Deep-MI/FastSurfer)[[paper]](https://doi.org/10.1016/j.neuroimage.2020.117012)
  - SynthSeg [`mri_synthseg` in Freesurfer][[paper]](https://doi.org/10.1016/j.media.2023.102789) which is contrast agnostic.
 
-
+ 
 ## 1. Small POLAFFINI tutorial
 A good way to understand how it works is to go through the following small tutorial: `dwarp_public/scripts/polaffini_example.py`.\
 This script uses the data available `dwarp_public/exmaple_data`. Extract and tweak bits to fit your needs.
