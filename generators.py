@@ -282,7 +282,7 @@ def pair_polaffini(mov_files,
             ref_img = utils.change_img_size(ref_img, grid_sz)
             
             ref_seg = sitk.ReadImage(mov_seg_files[i])
-            ref_seg = utils.change_img_res(ref_seg, vox_sz)
+            ref_seg = utils.change_img_res(ref_seg, vox_sz, interp=sitk.sitkNearestNeighbor)
             ref_seg = utils.change_img_size(ref_seg, grid_sz)
             
             if aug_axes:
