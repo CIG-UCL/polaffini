@@ -50,8 +50,10 @@ def estimateTransfo(mov_seg, ref_seg,
     mov_seg = sitk.Cast(mov_seg, sitk.sitkInt64)
     
     labs, _, _ = get_common_labels(ref_seg, mov_seg, omit_labs=omit_labs)
- 
+    
     ref_seg_down = sitk.Shrink(ref_seg, [int(down_factor)]*ndims)    
+    
+    print(ref_seg.GetSize(), ref_seg_down.GetSize(), mov_seg.GetSize())
     
     get_volumes = False
     if transfos_type == 'volrot':
@@ -134,7 +136,9 @@ def estimateTransfo(mov_seg, ref_seg,
     
     else:
         polyAff_svf = None
-        
+    
+    print(polyAff_svf.GetSize())
+    
     return aff_init, polyAff_svf
 
 
