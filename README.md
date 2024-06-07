@@ -78,6 +78,25 @@ Use `-h` to show more options and display help.\
 `-polaffini 1` indicates that POLAFFINI is performed.\
 `-omit_labs 2 41` will omit those labels for POLAFFINI as they are too big (whole left and right white matter) so taking their centroids is a bit meaningless.
 
+To register multiple images to the same template, place all your moving images in the same directory and pass the path to the directory as the `-m` option. If initialising with POLAFFINI, place the segmentation files in a separate directory, taking care to give each segmentation file the same filename as its corresponding image file:
+```
+img
+ | - scan1.nii.gz
+ | - scan2.nii.gz
+ \ - ...
+seg
+ | - scan1.nii.gz
+ | - scan2.nii.gz
+ \ - ...
+```
+
+Once the directory structure has been set up, pass the path to the segmentations directory as the `-ms` option. All output paths should also point to an existing directory, where the output files will be saved with the same name as their corresponding input image:
+```bash
+python scripts/register.py -m <path-to-moving-images-directory> \
+                           -ms <path-to-moving-segmentations-directory> \
+                           -rs <path-to-target-segmentation> \
+                           -oi <path-to-output-moved-images-directory>
+```
    
 ## 2. Training a new registration model from scratch
 

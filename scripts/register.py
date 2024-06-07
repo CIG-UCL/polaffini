@@ -11,23 +11,25 @@ import utils
 import dwarp
 import polaffini.polaffini as polaffini
 import argparse
+import pathlib
+from typing import Optional
 
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 parser = argparse.ArgumentParser(description="")
 # model
-parser.add_argument('-M', '--model', type=str, required=True, help="Path to the model (.h5).")
+parser.add_argument('-M', '--model', type=pathlib.Path, required=True, help="Path to the model (.h5).")
 parser.add_argument('-np', '--nb-passes', type=int, required=False, default=1, help="Number of passes. Default: 1.")
 # input files
-parser.add_argument('-m', '--mov-img', type=str, required=True, help='Path to the moving image.')
+parser.add_argument('-m', '--mov-img', type=pathlib.Path, required=True, help='Path to the moving image. May be a single file or a directory contining multiple images.')
 parser.add_argument('-g', '--geom', type=str, required=False, default='mni1', help="Path to geometry image for resampling, can be 'mni1' or 'mni2'. Default: same as ref for training.")
-parser.add_argument('-ms', '--mov-seg', type=str, required=False, default=None, help='Path to the moving segmentation (only required for POLAFFINI initialization).')
+parser.add_argument('-ms', '--mov-seg', type=pathlib.Path, required=False, default=None, help='Path to the moving segmentation (only required for POLAFFINI initialization). Must be a directory if -m is also a directory, where segmentations are saved with the same filename as their corresponding moving image')
 parser.add_argument('-rs', '--ref-seg', type=str, required=False, default=None, help="Path to the reference template segmentation, can be 'mni1' or 'mni2' (only required for POLAFFINI initialization).")
 # output files
-parser.add_argument('-oi', '--out-img', type=str, required=False, default=None, help='Path to the output moved image.')
-parser.add_argument('-os', '--out-seg', type=str, required=False, default=None, help='Path to the output moved segmentation.')
-parser.add_argument('-ot', '--out-transfo', type=str, required=False, default=None, help='Path to the output transformation.')
-parser.add_argument('-of', '--out-svf', type=str, required=False, default=None, help='Path to the output transformation in SVF form.')
+parser.add_argument('-oi', '--out-img', type=pathlib.Path, required=False, default=None, help='Path to the output moved image. If a directory is specified, moved images will be saved there with the same name as the moving image')
+parser.add_argument('-os', '--out-seg', type=pathlib.Path, required=False, default=None, help='Path to the output moved segmentation. If a directory is specified, moved segmentations will be saved there with the same name as the moving image')
+parser.add_argument('-ot', '--out-transfo', type=pathlib.Path, required=False, default=None, help='Path to the output transformation. If a directory is specified, transformations will be saved there with the same name as the moving image')
+parser.add_argument('-of', '--out-svf', type=pathlib.Path, required=False, default=None, help='Path to the output transformation in SVF form. If a directory is specified, transformations will be saved there with the same name as the moving image')
 # polaffini parameters
 parser.add_argument('-polaffini', '--polaffini', type=int, required=False, default=1, help='Perform POLAFFINI (1:yes, 0:no). Default: 1.')
 parser.add_argument('-noinit', '--noinit', type=int, required=False, default=0, help='Just read images without any kind of initialization. Default: 0.')
@@ -45,20 +47,38 @@ args.noinit = bool(args.noinit)
 if args.noinit:
     args.polaffini = False
 args.bg_transfo = bool(args.bg_transfo)
-    
-#%% Images and model loading
 
-if args.mov_seg is None and (args.polaffini or args.out_seg is not None):  
+mov_img_path: pathlib.Path = args.mov_img
+mov_seg_path: pathlib.Path = args.mov_seg
+
+out_img_path: pathlib.Path = args.out_img
+out_seg_path: pathlib.Path = args.out_seg
+out_transfo_path: pathlib.Path = args.out_transfo
+out_svf_path: pathlib.Path = args.out_svf
+
+if mov_img_path.is_dir():
+    if (mov_seg_path is not None and not mov_seg_path.is_dir()) \
+        or (out_img_path is not None and not out_img_path.is_dir()) \
+        or (out_seg_path is not None and not out_seg_path.is_dir()) \
+        or (out_transfo_path is not None and not out_transfo_path.is_dir()) \
+        or (out_svf_path is not None and not out_svf_path.is_dir()):
+        sys.exit("\nWhen specifying a directory as input, an existing directory must also be passed for the moving segmentations and all output paths.")
+
+if mov_seg_path is None and (args.polaffini or out_seg_path is not None):
     sys.exit("\nNeed a moving segmentation.")
-if args.ref_seg is None and (args.polaffini):  
+if args.ref_seg is None and (args.polaffini):
     sys.exit("\nNeed a reference segmentation.")
-    
+
 print('\nLoading model and images...')
 
 if args.ref_seg == "mni2":
     args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt_2mm.nii.gz')
 elif args.ref_seg == "mni1":
     args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt.nii.gz')
+
+ref_seg: Optional[sitk.Image] = None
+if args.polaffini:
+    ref_seg = utils.imageIO(args.ref_seg).read()
 
 model = dwarp.networks.diffeo2atlas.load(args.model)
 
@@ -67,92 +87,24 @@ ndims = len(inshape)
 matO = np.asmatrix(model.config.params['orientation'])
 origin, spacing, direction = utils.decomp_matOrientation(matO)
 
-moving = utils.imageIO(args.mov_img).read()
+paired_img_segs: list[tuple[pathlib.Path, Optional[pathlib.Path]]] = []
 
-if args.polaffini or args.out_seg is not None:  
-    moving_seg = utils.imageIO(args.mov_seg).read()
-    
-#%% POLAFFINI initialization
-
-if args.polaffini:
-    print('Initializing through POLAFFINI...')
-    ref_seg = utils.imageIO(args.ref_seg).read()
-    init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=moving_seg, 
-                                                      ref_seg=ref_seg,
-                                                      sigma=args.sigma,
-                                                      weight_bg=args.weight_bg,
-                                                      transfos_type=args.transfos_type,
-                                                      down_factor=args.down_factor,
-                                                      dist=args.dist,
-                                                      omit_labs=args.omit_labs,
-                                                      bg_transfo=args.bg_transfo)
-    transfo = polaffini.get_full_transfo(init_aff, polyAff_svf)  
-        
-    resampler = sitk.ResampleImageFilter()
-    resampler.SetOutputOrigin(origin)   
-    resampler.SetOutputSpacing(spacing)
-    resampler.SetOutputDirection(direction)
-    resampler.SetTransform(transfo) 
-    resampler.SetSize(inshape)
-    mov = resampler.Execute(moving)
-    mov = utils.normalize_intensities(mov)
-    
-    resampler.SetInterpolator(sitk.sitkNearestNeighbor)
-    mov_seg = resampler.Execute(moving_seg)
-
-    transfo_full = sitk.CompositeTransform(transfo)
+if mov_img_path.is_file():
+    paired_img_segs = [(mov_img_path, mov_seg_path if args.polaffini else None)]
 else:
-    if not args.noinit:
-        mov = utils.resample_image(moving, inshape, matO, sitk.sitkLinear) 
-        mov = utils.normalize_intensities(mov)
+    moving_image_names = [f for f in os.listdir(mov_img_path) if mov_img_path.joinpath(f).is_file()]
+
+    if args.polaffini:
+        seg_image_names = [f for f in os.listdir(mov_seg_path) if mov_seg_path.joinpath(f).is_file()]
+        common_image_names = set(moving_image_names).intersection(set(seg_image_names))
+        for image_name in sorted(list(common_image_names)):
+            paired_img_segs.append((mov_img_path.joinpath(image_name), mov_seg_path.joinpath(image_name)))
     else:
-        mov = moving
+        for image_name in moving_image_names:
+            paired_img_segs.append((mov_img_path.joinpath(image_name), None))
 
-    transfo_full = sitk.CompositeTransform(ndims)
-   
-mov = sitk.GetArrayFromImage(mov)[np.newaxis,..., np.newaxis]
-
-
-
-#%% Regsitration through model, transformations composition
-
-
-resampler = sitk.ResampleImageFilter()
-resampler.SetOutputOrigin(origin)   
-resampler.SetOutputSpacing(spacing)
-resampler.SetOutputDirection(direction)
-resampler.SetSize(inshape)
-resampler.SetInterpolator(sitk.sitkLinear)
-    
-for _ in range(args.nb_passes):
-    
-    print('Registering through model...')
-    _, field, svf = model.register(mov)
-
-
-    print('Composing transformations...')
-    
-    field = utils.get_real_field(field, matO)
-    field = sitk.GetImageFromArray(field[0, ...], isVector=True)
-    field.SetDirection(direction)
-    field.SetSpacing(spacing)
-    field.SetOrigin(origin)
-    field = sitk.DisplacementFieldTransform(field)
-    
-    transfo_full.AddTransform(field)
-
-    resampler.SetTransform(transfo_full) 
-    mov = resampler.Execute(moving)
-    mov = utils.normalize_intensities(mov)
-    mov = sitk.GetArrayFromImage(mov)[np.newaxis,..., np.newaxis]
-    
-
-#%% Final resampling and write ouput files
-
-    
-if args.out_img is not None or args.out_seg is not None or args.out_transfo is not None:
-    print('Resampling...')
-    resampler = sitk.ResampleImageFilter()
+geom: Optional[sitk.Image] = None
+if out_img_path is not None or out_seg_path is not None or out_transfo_path is not None:
     if args.geom == "mni2":
         geom_file = os.path.join(maindir, 'refs', 'mni_brain_2mm.nii.gz')
     elif args.geom == "mni1":
@@ -160,38 +112,109 @@ if args.out_img is not None or args.out_seg is not None or args.out_transfo is n
     else:
         geom_file = args.geom
     geom = utils.imageIO(geom_file).read()
-    resampler.SetSize(geom.GetSize())
-    resampler.SetOutputOrigin(geom.GetOrigin())
-    resampler.SetOutputDirection(geom.GetDirection())
-    resampler.SetOutputSpacing(geom.GetSpacing())
-    resampler.SetTransform(transfo_full)
-    if args.out_img is not None:
-        moved = resampler.Execute(moving)
-    if args.out_seg is not None:
-        resampler.SetInterpolator(sitk.sitkNearestNeighbor)
-        moved_seg = resampler.Execute(moving_seg)    
 
-if args.out_img is not None or args.out_seg is not None or args.out_transfo is not None or args.out_svf is not None:
-    print('Writing output files...')
-    if args.out_img is not None:
-        utils.imageIO(args.out_img).write(moved) 
-    if args.out_seg is not None:
-        utils.imageIO(args.out_seg).write(moved_seg) 
-    if args.out_transfo is not None:
-        tr2disp = sitk.TransformToDisplacementFieldFilter()
-        tr2disp.SetReferenceImage(geom)
-        utils.imageIO(tr2disp.Execute(args.out_transfo)).write(transfo_full)
-    if args.out_svf is not None:
-        svf = utils.get_real_field(svf, matO)
-        svf = sitk.GetImageFromArray(svf[0, ...], isVector=True)
-        svf.SetDirection(direction)
-        svf.SetSpacing(spacing)
-        svf.SetOrigin(origin)
-        utils.imageIO(args.out_svf).write(svf)
-        
-print('boom\n')    
+i = 1
+for image_path, segmentation_path in paired_img_segs:
+    image_name = image_path.name
 
+    print(f"\nRegistering \"{image_name}\" ({i}/{len(paired_img_segs)})")
+    i+= 1
 
+    moving = utils.imageIO(image_path).read()
 
+    if args.polaffini:
+        moving_seg = utils.imageIO(segmentation_path).read()
 
+        print('Initializing through POLAFFINI...')
+        init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=moving_seg,
+                                                          ref_seg=ref_seg,
+                                                          sigma=args.sigma,
+                                                          weight_bg=args.weight_bg,
+                                                          transfos_type=args.transfos_type,
+                                                          down_factor=args.down_factor,
+                                                          dist=args.dist,
+                                                          omit_labs=args.omit_labs,
+                                                          bg_transfo=args.bg_transfo)
+        transfo = polaffini.get_full_transfo(init_aff, polyAff_svf)
 
+        resampler = sitk.ResampleImageFilter()
+        resampler.SetOutputOrigin(origin)
+        resampler.SetOutputSpacing(spacing)
+        resampler.SetOutputDirection(direction)
+        resampler.SetTransform(transfo)
+        resampler.SetSize(inshape)
+        mov = resampler.Execute(moving)
+        mov = utils.normalize_intensities(mov)
+
+        transfo_full = sitk.CompositeTransform(transfo)
+    else:
+        if not args.noinit:
+            mov = utils.resample_image(moving, inshape, matO, sitk.sitkLinear)
+            mov = utils.normalize_intensities(mov)
+        else:
+            mov = moving
+
+        transfo_full = sitk.CompositeTransform(ndims)
+
+    mov = sitk.GetArrayFromImage(mov)[np.newaxis,..., np.newaxis]
+
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetOutputOrigin(origin)
+    resampler.SetOutputSpacing(spacing)
+    resampler.SetOutputDirection(direction)
+    resampler.SetSize(inshape)
+    resampler.SetInterpolator(sitk.sitkLinear)
+
+    for _ in range(args.nb_passes):
+        print('Registering through model...')
+        _, field, svf = model.register(mov)
+
+        print('Composing transformations...')
+        field = utils.get_real_field(field, matO)
+        field = sitk.GetImageFromArray(field[0, ...], isVector=True)
+        field.SetDirection(direction)
+        field.SetSpacing(spacing)
+        field.SetOrigin(origin)
+        field = sitk.DisplacementFieldTransform(field)
+
+        transfo_full.AddTransform(field)
+
+    if geom is not None:
+        print('Resampling...')
+        resampler = sitk.ResampleImageFilter()
+        resampler.SetSize(geom.GetSize())
+        resampler.SetOutputOrigin(geom.GetOrigin())
+        resampler.SetOutputDirection(geom.GetDirection())
+        resampler.SetOutputSpacing(geom.GetSpacing())
+        resampler.SetTransform(transfo_full)
+        if out_img_path is not None:
+            moved = resampler.Execute(moving)
+        if out_seg_path is not None:
+            resampler.SetInterpolator(sitk.sitkNearestNeighbor)
+            moved_seg = resampler.Execute(moving_seg)
+
+    if out_img_path is not None or out_seg_path is not None or out_transfo_path is not None or out_svf_path is not None:
+        print('Writing output files...')
+        if out_img_path is not None:
+            out_path = out_img_path if out_img_path.suffix != "" else out_img_path.joinpath(image_name)
+            utils.imageIO(out_path).write(moved)
+        if out_seg_path is not None:
+            out_path = out_seg_path if out_seg_path.suffix != "" else out_seg_path.joinpath(image_name)
+            utils.imageIO(out_path).write(moved_seg)
+        if out_transfo_path is not None:
+            image_without_extension = image_name.split(".")[0]
+            out_path = out_transfo_path if out_transfo_path.suffix != "" else out_transfo_path.joinpath(f"{image_without_extension}.nii.gz")
+            tr2disp = sitk.TransformToDisplacementFieldFilter()
+            tr2disp.SetReferenceImage(geom)
+            utils.imageIO(out_path).write(tr2disp.Execute(transfo_full))
+        if out_svf_path is not None:
+            image_without_extension = image_name.split(".")[0]
+            out_path = out_svf_path if out_svf_path.suffix != "" else out_svf_path.joinpath(f"{image_without_extension}.nii.gz")
+            svf = utils.get_real_field(svf, matO)
+            svf = sitk.GetImageFromArray(svf[0, ...], isVector=True)
+            svf.SetDirection(direction)
+            svf.SetSpacing(spacing)
+            svf.SetOrigin(origin)
+            utils.imageIO(out_path).write(svf)
+
+print('boom\n')
