@@ -56,18 +56,21 @@ def plot_losses(loss_file, is_val=False):
     if is_val:
         nb_losses = int(nb_losses / 2)
     
-    f, axs = plt.subplots(1,nb_losses); f.dpi = 200
+    f, axs = plt.subplots(1, nb_losses, figsize=(20,5))
+    f.dpi = 200
     plt.rcParams['font.size'] = '3'
     plt.rcParams["xtick.major.size"] = 2
     plt.rcParams["ytick.major.size"] = 2
     
     for l in range(nb_losses):
-        axs[l].plot(tab_loss.epoch, tab_loss.loc[:,tab_loss.columns[l+1]], linewidth=0.5) 
+        axs[l].plot(tab_loss.epoch, tab_loss.loc[:,tab_loss.columns[l+1]], linewidth=0.5, label="training")
         if is_val:
-            axs[l].plot(tab_loss.epoch, tab_loss.loc[:,tab_loss.columns[nb_losses+l+1]], linewidth=0.5) 
-        axs[l].set_title(tab_loss.columns[l+1], fontsize=6)
+            axs[l].plot(tab_loss.epoch, tab_loss.loc[:,tab_loss.columns[nb_losses+l+1]], linewidth=0.5, label="validation")
+        axs[l].set_title(tab_loss.columns[l+1], fontsize=12)
+        axs[l].legend(prop={'size': 10})
     
-    plt.show()
+    plt.tight_layout()
+    plt.savefig("./losses.png")
 
 
 

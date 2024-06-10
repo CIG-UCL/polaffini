@@ -159,8 +159,7 @@ hist = model.fit(gen_train,
                  callbacks=[save_callback, csv_logger],
                  verbose=1)
 
-utils.plot_losses(args.model[:-3] + '_losses.csv', is_val=args.val_data is not None)
+dwarp.utils.plot_losses(args.model[:-3] + '_losses.csv', is_val=args.val_data is not None)
 
 
 
-    
