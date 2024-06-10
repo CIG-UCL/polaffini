@@ -25,6 +25,7 @@ parser.add_argument('-ot', '--out-transfo', type=int, required=False, default=0,
 parser.add_argument('-os', '--out-seg', type=int, required=False, default=0, help='Also output moved segmentations (1:yes, 0:no). Default: 0.')
 parser.add_argument('-oa', '--out-aux', type=int, required=False, default=0, help='Also output moved auxiliary images (1:yes, 0:no). Default: 0.')
 parser.add_argument('-ohot', '--one-hot', type=int, required=False, default=1, help='Perform one-hot encoding on moved output segmentations (1:yes, 0:no). Default: 1.')
+parser.add_argument('-mask', '--mask', type=int, required=False, default=1, help='Perform masking using all labels except 24 (1:yes, 0:no). Default: 1.')
 parser.add_argument('-kpad', '--k-padding', type=int, required=False, default=5, help='Pad an image such that image size along each dimension  is a multiple of 2^k (k must be greater than the number of contracting levels). Default: 5.')
 parser.add_argument('-ext', '--ext', type=str, required=False, default='.nii.gz', help="Extension of output images. Default: '.nii.gz'.")
 # polaffini parameters
@@ -41,6 +42,7 @@ parser.add_argument('-p', '--proc', type=int, required=False, default=1, help='N
 args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 args.out_transfo = bool(args.out_transfo)
 args.out_seg = bool(args.out_seg)
+args.mask = bool(args.mask)
 args.one_hot = bool(args.one_hot)
 args.bg_transfo = bool(args.bg_transfo)
 if args.ext[0] != '.':
@@ -70,6 +72,7 @@ def init_polaffini_set(mov_files,
             print(i+1, '/', len(mov_files), end="\r", flush=True)
             
         mov_seg = utils.imageIO(mov_seg_files[i]).read()
+        
         init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=mov_seg, 
                                                           ref_seg=ref_seg,
                                                           sigma=sigma,
@@ -87,8 +90,13 @@ def init_polaffini_set(mov_files,
         resampler.SetOutputPixelType(sitk.sitkFloat32)
         resampler.SetInterpolator(sitk.sitkLinear)
         mov_img = sitk.Cast(utils.imageIO(mov_files[i]).read(), sitk.sitkFloat32)
+        if args.mask:
+            mask = sitk.BinaryThreshold(mov_seg, 1, 23) + sitk.BinaryThreshold(mov_seg, 25, 1e9)
+            mask = sitk.BinaryMorphologicalClosing(mask, [6]*3)
+            mov_img = sitk.Mask(mov_img, mask)
         mov_img = resampler.Execute(mov_img)
         mov_img = utils.normalize_intensities(mov_img)
+            
         outfile, _ = utils.imageIO(os.path.split(mov_files[i])[-1])._splitext()
         utils.imageIO(os.path.join(out_dir, 'img', outfile + ext)).write(mov_img)
         if mov_aux_files is not None:

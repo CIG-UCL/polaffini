@@ -11,6 +11,7 @@ import SimpleITK as sitk
 import argparse
 import generators
 import utils
+import random
 
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
@@ -20,6 +21,7 @@ parser = argparse.ArgumentParser(description="Training script for dwarp diffeomo
 parser.add_argument('-t', '--train_data', type=str, required=True, help='Path to the training data initialized using pretrain script (should be the same as the -o from pretrain script).')
 parser.add_argument('-v', '--val_data', type=str, required=False, default=None, help='Path to the validation data initialized using pretrain script (should be the same as the -o from pretrain script).')
 parser.add_argument('-s', '--use-seg', type=int, required=False, default=0, help='Use segmentations at training (1: yes, 0: no). Default: 0.')
+parser.add_argument('-ohot', '--ohot', type=int, required=False, default=1, help='Segmentations are one-hot encoded (1: yes, 0: no). Default: 1.')
 # model and its hyper-paramaters
 parser.add_argument('-o', '--model', type=str, required=True, help="Path to the output model (.h5).")
 parser.add_argument('-lr', '--learning-rate', type=float, required=False, default=1e-4, help="Learning rate. Default: 1e-4.")
@@ -31,17 +33,30 @@ parser.add_argument('-b', '--batch-size', type=int, required=False, default=1, h
 parser.add_argument('-l', '--loss', type=str, required=False, default='nlcc', help="Intensity-based similarity loss: 'nlcc' (normalized local squared correlation coefficient) or 'mse' (mean square error). Default: nlcc.")
 parser.add_argument('-ls', '--loss-seg', type=str, required=False, default='dice', help="Segmentation-based overlap loss: 'dice' or other to be added. Default: 'dice'")
 parser.add_argument('-lw', '--loss-win', type=int, required=False, default=5, help="Window diameter (in voxels) for local losses (nlcc). Default: 5")
+parser.add_argument('-wi', '--weight-img-loss', type=float, required=False, default=1, help="Weight for the image loss. Default: 1.")
 parser.add_argument('-ws', '--weight-seg-loss', type=float, required=False, default=0.01, help="Weight for the segmentation loss. Default: 0.01.")
 parser.add_argument('-wr', '--weight-reg-loss', type=float, required=False, default=1, help="Weight for the regularization loss. Default: 1.")
 # other
 parser.add_argument('-r', '--resume', type=int, required=False, default=0, help='Resume a traning that stopped for some reason (1: yes, 0: no). Default: 0.')
-
+parser.add_argument('-seed', '--seed', type=int, required=False, default=None, help='Seed for random. Default: None.')
 
 args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 args.use_seg = bool(args.use_seg)
+args.ohot = bool(args.ohot)
 args.resume = bool(args.resume)
 
+if args.seed is not None:
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    tf.random.set_seed(args.seed)
+
+with open(args.model[:-3] + '_args.txt', 'w') as file:
+    for arg in vars(args):
+        file.write("{}: {}\n".format(arg, getattr(args, arg)))
+        
 #%% Generators to access training (and validation) data.
+
+is_val = args.val_data is not None
 
 # ref images
 ref_file = os.path.join(args.train_data, 'ref_img.nii.gz') 
@@ -55,39 +70,47 @@ mov_seg_files = None
 if args.use_seg:
     mov_seg_files = sorted(glob.glob(os.path.join(args.train_data, 'seg/*')))
 gen_train = generators.mov2atlas_initialized(mov_files = mov_files, 
-                                                   ref_file = ref_file,
-                                                   mov_seg_files = mov_seg_files,
-                                                   ref_seg_file = ref_seg_file,
-                                                   batch_size = args.batch_size)
+                                             ref_file = ref_file,
+                                             mov_seg_files = mov_seg_files,
+                                             ref_seg_file = ref_seg_file,
+                                             one_hot=args.ohot,
+                                             batch_size = args.batch_size)
 n_train = len(mov_files)
 
 # validation images
-if args.val_data is None:  
+if not is_val:  
     gen_val = None
+    sample = next(gen_train)
 else:
     mov_files_val = sorted(glob.glob(os.path.join(args.val_data, 'img/*')))  
     mov_seg_files_val = None
     if args.use_seg:
         mov_seg_files_val = sorted(glob.glob(os.path.join(args.val_data, 'seg/*')))
     gen_val = generators.mov2atlas_initialized(mov_files = mov_files_val, 
-                                                     ref_file = ref_file,
-                                                     mov_seg_files = mov_seg_files_val,
-                                                     ref_seg_file = ref_seg_file,
-                                                     batch_size = args.batch_size)
+                                               ref_file = ref_file,
+                                               mov_seg_files = mov_seg_files_val,
+                                               ref_seg_file = ref_seg_file,
+                                               one_hot=args.ohot,
+                                               batch_size = args.batch_size)
     n_val = len(mov_files_val)
-
+    sample = next(gen_val)
+    
+    
 ref = sitk.ReadImage(ref_file)
 matO = utils.get_matOrientation(ref)
 
-sample_train = next(gen_train)
-dwarp.utils.print_inputGT(sample_train)
-inshape = sample_train[0][0].shape[1:-1]
-nfeats = sample_train[0][0].shape[-1]
+dwarp.utils.print_inputGT(sample)
+inshape = sample[0][0].shape[1:-1]
+nfeats = sample[0][0].shape[-1]
 nb_labs = None
 if args.use_seg:
-    nb_labs = sample_train[0][1].shape[-1]
+    nb_labs = sample[0][1].shape[-1]
+    if args.ohot:
+        labels = None
+    else:
+        labels = np.unique(sample[1][1]).tolist()
       
-#%% Prepare and build he model
+#%% Prepare and build the model
 
 if args.loss == 'nlcc':
     losses = [dwarp.losses.wLCC(win=args.loss_win).loss]
@@ -95,10 +118,10 @@ elif args.loss == 'mse':
     losses = [dwarp.losses.wMSE().loss]
 else:
     sys.exit("Error: only 'mse' and 'nlcc' intensity-based losses accepted.")
-loss_weights = [1]
+loss_weights = [args.weight_img_loss]
 
 if args.use_seg:
-    losses += [dwarp.losses.Dice().loss]
+    losses += [dwarp.losses.Dice(is_onehot=args.ohot, labels=labels).loss]
     loss_weights += [args.weight_seg_loss]
     
 losses += [voxelmorph.losses.Grad('l2', loss_mult=1).loss]
@@ -132,6 +155,7 @@ else:
     initial_epoch = 0
   
 model.compile(optimizer=optimizer, loss=losses, loss_weights=loss_weights)
+tf.keras.utils.plot_model(model, to_file=args.model[:-3] + '_plot.png', show_shapes=True, show_layer_names=True)
 
 #%% Train the model
 
@@ -149,6 +173,9 @@ model.save(args.model.format(epoch=initial_epoch))
 
 save_callback = tf.keras.callbacks.ModelCheckpoint(args.model, monitor=monitor, mode='min', save_best_only=True)
 csv_logger = tf.keras.callbacks.CSVLogger(args.model[:-3] + '_losses.csv', append=True, separator=',')
+imgdir = os.path.join(os.path.dirname(args.model), 'imgs')
+os.makedirs(imgdir, exist_ok=True)
+plot_reg = dwarp.callbacks.plotImgReg(sample[0][1], sample[0][0], os.path.join(imgdir, 'img'), modeltype='diffeo2template')
 
 hist = model.fit(gen_train,
                  validation_data=gen_val,
@@ -156,7 +183,7 @@ hist = model.fit(gen_train,
                  initial_epoch=initial_epoch,
                  epochs=args.epochs,
                  steps_per_epoch=steps_per_epoch,
-                 callbacks=[save_callback, csv_logger],
+                 callbacks=[save_callback, csv_logger, plot_reg],
                  verbose=1)
 
 dwarp.utils.plot_losses(args.model[:-3] + '_losses.csv', is_val=args.val_data is not None)

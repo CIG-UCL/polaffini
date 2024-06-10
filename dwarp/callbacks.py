@@ -8,16 +8,20 @@ from . import utils, layers, losses
 
 class plotImgReg(tf.keras.callbacks.Callback):
    
-    def __init__(self, ref, mov, img_prefix, dim=0):
+    def __init__(self, ref, mov, img_prefix, dim=0, modeltype='diffeo_pair'):
         self.dim = dim
         self.ref = ref
         self.mov = mov
         center = np.mean(np.where(ref[0,...,0]>0), axis=1)
         self.sl = int(center[dim])
         self.img_prefix = img_prefix
+        self.modeltype = modeltype
     
     def on_epoch_begin(self, epoch, logs=None):
-        moved, _, _, _, _ = self.model.register(self.mov, self.ref)
+        if self.modeltype == 'diffeo_pair':
+            moved, _, _, _, _ = self.model.register(self.mov, self.ref)
+        elif self.modeltype == 'diffeo2template':
+            moved, _, _ = self.model.register(self.mov)
         moved = moved[0, ..., 0]
         moved = moved.take(self.sl, axis=self.dim)[...,np.newaxis]
         moved= np.uint8(moved * [0,127,255])

@@ -131,6 +131,7 @@ def mov2atlas_initialized(mov_files,
                           mov_seg_files=None,
                           ref_seg_file=None,
                           weight_file=None,
+                          one_hot=True,
                           batch_size=1):
     """
     Generator for moving images and a single reference. 
@@ -193,7 +194,10 @@ def mov2atlas_initialized(mov_files,
             if is_seg:
                 mov_seg = sitk.ReadImage(mov_seg_files[i])
                 mov_seg = sitk.GetArrayFromImage(mov_seg)
-                mov_seg = np.transpose(mov_seg,[*range(1,ndims+1)]+[0])[np.newaxis,...]
+                if one_hot:
+                    mov_seg = np.transpose(mov_seg,[*range(1,ndims+1)]+[0])[np.newaxis,...]
+                else:
+                    mov_seg = mov_seg[np.newaxis,..., np.newaxis]   
                 mov_seg = mov_seg.astype(np.float32)
                 mov_segs += [mov_seg] 
 
@@ -203,7 +207,10 @@ def mov2atlas_initialized(mov_files,
             mov_segs = np.concatenate(mov_segs, axis=0)
 
             ref_seg = sitk.GetArrayFromImage(ref_seg)
-            ref_seg = np.transpose(ref_seg,[*range(1,ndims+1)]+[0])[np.newaxis,...]
+            if one_hot:
+                ref_seg = np.transpose(ref_seg,[*range(1,ndims+1)]+[0])[np.newaxis,...]
+            else:
+                ref_seg = ref_seg[np.newaxis,..., np.newaxis]
             ref_seg = ref_seg.astype(np.float32)
             ref_seg = np.concatenate([ref_seg]*batch_size, axis=0)
          
@@ -229,9 +236,7 @@ def pair_polaffini(mov_files,
                    mov_seg_files,
                    vox_sz=[2,2,2],
                    grid_sz=[96,128,96],
-                   labels=[2, 4, 5, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 26, 28, 31, 41, 43, 44, 46, 47, 49, 50, 51, 52, 53, 54, 58, 60, 63,
-                           1002, 1003, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1034, 1035,
-                           2002, 2003, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2034, 2035],
+                   labels='dkt',
                    aug_axes = False,
                    one_hot = False,
                    sdf = False, # signed distance field
@@ -284,6 +289,8 @@ def pair_polaffini(mov_files,
     """
     
     ndims = len(vox_sz)
+    if isinstance(labels, str):
+        labels = get_labels(labels)
     nlabs = len(labels)
 
     while True:
@@ -380,3 +387,12 @@ def pair_polaffini(mov_files,
         yield (inputs, groundTruths)
         
 
+
+def get_labels(lut='dkt'):
+    
+    if lut == 'dkt':
+        labels=[2, 4, 5, 7, 8, 10, 11, 12, 13, 14, 15, 16, 17, 18, 26, 28, 31, 41, 43, 44, 46, 47, 49, 50, 51, 52, 53, 54, 58, 60, 63,
+                1002, 1003, 1005, 1006, 1007, 1008, 1009, 1010, 1011, 1012, 1013, 1014, 1015, 1016, 1017, 1018, 1019, 1020, 1021, 1022, 1023, 1024, 1025, 1026, 1027, 1028, 1029, 1030, 1031, 1034, 1035,
+                2002, 2003, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030, 2031, 2034, 2035]
+        
+        return labels    

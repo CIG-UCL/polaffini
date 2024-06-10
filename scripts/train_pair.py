@@ -35,6 +35,7 @@ parser.add_argument('-b', '--batch-size', type=int, required=False, default=1, h
 parser.add_argument('-l', '--loss', type=str, required=False, default='nlcc', help="Intensity-based similarity loss: 'nlcc' (normalized local squared correlation coefficient) or 'mse' (mean square error). Default: nlcc.")
 parser.add_argument('-ls', '--loss-seg', type=str, required=False, default='dice', help="Segmentation-based overlap loss: 'dice' or 'sdf' (signed distance field). Default: 'dice'")
 parser.add_argument('-lw', '--loss-win', type=int, required=False, default=5, help="Window diameter (in voxels) for local losses (nlcc). Default: 5")
+parser.add_argument('-wi', '--weight-img-loss', type=float, required=False, default=1, help="Weight for the image loss. Default: 1.")
 parser.add_argument('-ws', '--weight-seg-loss', type=float, required=False, default=0.1, help="Weight for the segmentation loss. Default: 0.1.")
 parser.add_argument('-wr', '--weight-reg-loss', type=float, required=False, default=1, help="Weight for the regularization loss. Default: 1.")
 # polaffini parameters
@@ -114,12 +115,11 @@ dwarp.utils.print_inputGT(sample)
 inshape = sample[0][0].shape[1:-1]
 
       
-#%% Prepare and build he model
+#%% Prepare and build the model
 
 if args.loss == 'nlcc':
     # loss_img = dwarp.losses.wLCC(win=args.loss_win).loss
-    loss_img = voxelmorph.losses.NCC(win=args.loss_win).loss
-    
+    loss_img = voxelmorph.losses.NCC(win=args.loss_win).loss   
 elif args.loss == 'mse':
     loss_img = dwarp.losses.wMSE().loss
 
@@ -131,8 +131,8 @@ elif is_sdf:
     
 loss_smo = voxelmorph.losses.Grad('l2', loss_mult=1).loss
 
-losses = [loss_img, loss_img, loss_seg, loss_seg, loss_smo]
-loss_weights = [1, 1, args.weight_seg_loss, args.weight_seg_loss, args.weight_reg_loss]
+losses = [loss_img]*2 + [loss_seg]*2 + [loss_smo]
+loss_weights = [args.weight_img_loss]*2 + [args.weight_seg_loss]*2 + [args.weight_reg_loss]
     
 optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
 
@@ -174,8 +174,8 @@ model.save(args.model.format(epoch=initial_epoch))
 save_callback = tf.keras.callbacks.ModelCheckpoint(args.model, monitor=monitor, mode='min', save_best_only=True)
 csv_logger = tf.keras.callbacks.CSVLogger(args.model[:-3] + '_losses.csv', append=True, separator=',')
 imgdir = os.path.join(os.path.dirname(args.model), 'imgs')
-os.makedirs(imgdir,  exist_ok=True)
-plot_reg = dwarp.callbacks.plotImgReg(sample[0][1], sample[0][0], os.path.join(imgdir, 'img'))
+os.makedirs(imgdir, exist_ok=True)
+plot_reg = dwarp.callbacks.plotImgReg(sample[0][1], sample[0][0], os.path.join(imgdir, 'img'), modeltype='diffeo_pair')
 
 hist = model.fit(gen_train,
                  validation_data=gen_val,
