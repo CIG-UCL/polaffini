@@ -156,6 +156,10 @@ resampler.SetInterpolator(sitk.sitkNearestNeighbor)
 resampler.SetOutputPixelType(sitk.sitkFloat32)
 ref_seg = utils.imageIO(args.ref_seg).read()
 ref_seg = resampler.Execute(ref_seg)
+if args.mask:
+    mask = sitk.BinaryThreshold(ref_seg, 1, 23) + sitk.BinaryThreshold(ref_seg, 25, 1e9)
+    mask = sitk.BinaryMorphologicalClosing(mask, [6]*3)
+    ref = sitk.Mask(ref, mask)
 labs = np.unique(sitk.GetArrayFromImage(ref_seg))
 labs = np.delete(labs, labs==0)
    

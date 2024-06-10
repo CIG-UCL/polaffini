@@ -16,7 +16,7 @@ class plotImgReg(tf.keras.callbacks.Callback):
         self.sl = int(center[dim])
         self.img_prefix = img_prefix
         self.modeltype = modeltype
-    
+        
     def on_epoch_begin(self, epoch, logs=None):
         if self.modeltype == 'diffeo_pair':
             moved, _, _, _, _ = self.model.register(self.mov, self.ref)

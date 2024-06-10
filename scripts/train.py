@@ -113,7 +113,8 @@ if args.use_seg:
 #%% Prepare and build the model
 
 if args.loss == 'nlcc':
-    losses = [dwarp.losses.wLCC(win=args.loss_win).loss]
+    # losses = [dwarp.losses.wLCC(win=args.loss_win).loss]
+    losses = [voxelmorph.losses.NCC(win=args.loss_win).loss]
 elif args.loss == 'mse':
     losses = [dwarp.losses.wMSE().loss]
 else:
@@ -175,7 +176,7 @@ save_callback = tf.keras.callbacks.ModelCheckpoint(args.model, monitor=monitor, 
 csv_logger = tf.keras.callbacks.CSVLogger(args.model[:-3] + '_losses.csv', append=True, separator=',')
 imgdir = os.path.join(os.path.dirname(args.model), 'imgs')
 os.makedirs(imgdir, exist_ok=True)
-plot_reg = dwarp.callbacks.plotImgReg(sample[0][1], sample[0][0], os.path.join(imgdir, 'img'), modeltype='diffeo2template')
+plot_reg = dwarp.callbacks.plotImgReg(sample[1][0], sample[0][0], os.path.join(imgdir, 'img'), modeltype='diffeo2template')
 
 hist = model.fit(gen_train,
                  validation_data=gen_val,
