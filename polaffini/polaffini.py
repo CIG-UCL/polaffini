@@ -53,8 +53,6 @@ def estimateTransfo(mov_seg, ref_seg,
     
     ref_seg_down = sitk.Shrink(ref_seg, [int(down_factor)]*ndims)    
     
-    print(ref_seg.GetSize(), ref_seg_down.GetSize(), mov_seg.GetSize())
-    
     get_volumes = False
     if transfos_type == 'volrot':
         get_volumes = True
@@ -100,6 +98,11 @@ def estimateTransfo(mov_seg, ref_seg,
                 rows_l, _ = np.where(DT == lab)
                 connected_labs = np.unique(DT[rows_l])
                 ind = [i in connected_labs for i in labs]       
+            
+            if transfos_type == 'affine' and sum(ind) < 4:
+                continue
+            if transfos_type == 'rigid' and sum(ind) < 2:
+                continue
                 
             loc_mat = opti_linear_transfo_between_point_sets(ref_pts[ind, :], 
                                                              mov_pts[ind, :], 
@@ -136,9 +139,7 @@ def estimateTransfo(mov_seg, ref_seg,
     
     else:
         polyAff_svf = None
-    
-    print(polyAff_svf.GetSize())
-    
+
     return aff_init, polyAff_svf
 
 
