@@ -367,14 +367,13 @@ class diffeo_pair_seg(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmD
         """
         return tf.keras.Model(self.inputs[:2], 
                              [self.references.moved_pos, self.references.moved_neg,
-                              self.references.moved_seg_pos, self.references.moved_seg_neg,
                               self.references.defo_pos, self.references.defo_neg, self.references.svf])
 
-    def register(self, src):
+    def register(self, src, trg):
         """
         Predicts the transform from src to atlas.
         """
-        return self.get_registration_model().predict(src, verbose=0)
+        return self.get_registration_model().predict([src, trg], verbose=0)
     
     
         

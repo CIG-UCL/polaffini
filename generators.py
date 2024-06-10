@@ -257,7 +257,7 @@ def pair_polaffini(mov_files,
     grid_sz : TYPE, optional
         Grid size to crop / pad the images to. Default: [96,128,96].
     labels : list (int), optional
-        DESCRIPTION. Default: dkt labels.
+        List of labels. Default: dkt labels.
     aug_axes : bool, optional
         Do axes augmentation through permutation. Default: False.
     one_hot : bool, optional
@@ -296,7 +296,8 @@ def pair_polaffini(mov_files,
         mov_imgs = [] 
         mov_segs = []
         for i, j in zip(ind_batch_ref, ind_batch_mov): 
-    
+            # print(mov_files[i])
+            # print(mov_files[j])
             ref_img = sitk.ReadImage(mov_files[i])
             ref_seg = sitk.ReadImage(mov_seg_files[i])
             mask = sitk.BinaryThreshold(ref_seg, 1, 23) + sitk.BinaryThreshold(ref_seg, 25, 1e9)
@@ -316,9 +317,10 @@ def pair_polaffini(mov_files,
                 
             ref_img = utils.change_img_res(ref_img, vox_sz)
             ref_img = utils.change_img_size(ref_img, grid_sz)
+            ref_img = utils.normalize_intensities(ref_img)
             ref_seg = utils.change_img_res(ref_seg, vox_sz, interp=sitk.sitkNearestNeighbor)
             ref_seg = utils.change_img_size(ref_seg, grid_sz)
-               
+   
             mov_img = sitk.ReadImage(mov_files[j])
             mov_seg = sitk.ReadImage(mov_seg_files[j])
             mask = sitk.BinaryThreshold(mov_seg, 1, 23) + sitk.BinaryThreshold(mov_seg, 25, 1e9)

@@ -91,6 +91,7 @@ n_train = len(mov_files)
 # validation data
 if not is_val:  
     gen_val = None
+    sample = next(gen_train)
 else:
     mov_files_val = sorted(glob.glob(os.path.join(args.img_train, '*')))  
     mov_seg_files_val = sorted(glob.glob(os.path.join(args.seg_train, '*')))  
@@ -106,10 +107,11 @@ else:
                                         polaffini_omit_labs=args.omit_labs,      
                                         batch_size=args.batch_size)
     n_val = len(mov_files_val)
+    sample = next(gen_val)
 
-sample_train = next(gen_train)
-dwarp.utils.print_inputGT(sample_train)
-inshape = sample_train[0][0].shape[1:-1]
+
+dwarp.utils.print_inputGT(sample)
+inshape = sample[0][0].shape[1:-1]
 
       
 #%% Prepare and build he model
@@ -145,7 +147,7 @@ if args.resume:
 else:
     # build the model
     model = dwarp.networks.diffeo_pair_seg(inshape=args.grid_size,
-                                           nb_labs=sample_train[0][0].shape[-1],
+                                           nb_labs=sample[0][0].shape[-1],
                                            nb_enc_features=args.enc_nf,
                                            nb_dec_features=args.dec_nf,
                                            int_steps=7,
@@ -153,7 +155,7 @@ else:
     initial_epoch = 0
   
 model.compile(optimizer=optimizer, loss=losses, loss_weights=loss_weights)
-tf.keras.utils.plot_model(model, to_file=args.model[:-3] + 'plot.png', show_shapes=True, show_layer_names=True)
+tf.keras.utils.plot_model(model, to_file=args.model[:-3] + '_plot.png', show_shapes=True, show_layer_names=True)
 
 #%% Train the model
 
@@ -171,6 +173,9 @@ model.save(args.model.format(epoch=initial_epoch))
 
 save_callback = tf.keras.callbacks.ModelCheckpoint(args.model, monitor=monitor, mode='min', save_best_only=True)
 csv_logger = tf.keras.callbacks.CSVLogger(args.model[:-3] + '_losses.csv', append=True, separator=',')
+imgdir = os.path.join(os.path.dirname(args.model), 'imgs')
+os.makedirs(imgdir,  exist_ok=True)
+plot_reg = dwarp.callbacks.plotImgReg(sample[0][1], sample[0][0], os.path.join(imgdir, 'img'))
 
 hist = model.fit(gen_train,
                  validation_data=gen_val,
@@ -178,7 +183,7 @@ hist = model.fit(gen_train,
                  initial_epoch=initial_epoch,
                  epochs=args.epochs,
                  steps_per_epoch=steps_per_epoch,
-                 callbacks=[save_callback, csv_logger],
+                 callbacks=[save_callback, csv_logger, plot_reg],
                  verbose=1)
 
 utils.plot_losses(args.model[:-3] + '_losses.csv', is_val=is_val)
