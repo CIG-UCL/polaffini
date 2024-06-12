@@ -24,11 +24,11 @@ parser.add_argument('-sv', '--seg_val', type=str, required=False, default=None, 
 parser.add_argument('-lab', '--labels', type=str, required=False, default='dkt', help="Path to the file containing the label numbers (1 line csv file) or 'dkt' for DKT labels.")
 # model and its hyper-paramaters
 parser.add_argument('-o', '--model', type=str, required=True, help="Path to the output model (.h5).")
-parser.add_argument('-vsz', '--vox_size', type=str, required=False, default=[2,2,2], help="Voxel size to resample the images to. Default: [2,2,2].")
-parser.add_argument('-gsz', '--grid_size', type=str, required=False, default=[96,128,96], help="Grid size to crop / pad the images to (must be a multiple of 2^k where k is the number of encoder levels). Default: [96,128,96].")
+parser.add_argument('-vsz', '--vox_size', type=int, nargs='+', required=False, default=[2,2,2], help="Voxel size to resample the images to. Default: 2 2 2.")
+parser.add_argument('-gsz', '--grid_size', type=int, nargs='+', required=False, default=[96,128,96], help="Grid size to crop / pad the images to (must be a multiple of 2^k where k is the number of encoder levels). Default: 96 128 96.")
 parser.add_argument('-lr', '--learning-rate', type=float, required=False, default=1e-4, help="Learning rate. Default: 1e-4.")
-parser.add_argument('-enc', '--enc-nf', type=list, required=False, default=[16, 32, 32, 32, 32], help="Number of encoder features. Default: [16, 32, 32, 32, 32].")
-parser.add_argument('-dec', '--dec-nf', type=list, required=False, default=[32, 32, 32, 32, 32, 16, 16], help="Number of decoder features. Default: [32, 32, 32, 32, 32, 16, 16].")
+parser.add_argument('-enc', '--enc-nf', type=int, nargs='+', required=False, default=[16, 32, 32, 32, 32], help="Number of encoder features. Default: 16 32 32 32 32.")
+parser.add_argument('-dec', '--dec-nf', type=int, nargs='+', required=False, default=[32, 32, 32, 32, 32, 16, 16], help="Number of decoder features. Default: 32 32 32 32 32 16 16.")
 parser.add_argument('-e', '--epochs', type=int, required=False, default=1000, help="Number of epochs. Default: 1000.")
 parser.add_argument('-b', '--batch-size', type=int, required=False, default=1, help='Batch size. Default: 1.')
 # model losses
