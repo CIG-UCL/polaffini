@@ -14,7 +14,10 @@ import utils
 import random
 
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
-
+gpus = tf.config.experimental.list_physical_devices('GPU')
+tf.config.experimental.set_virtual_device_configuration(gpus[0],
+                                                        [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=12000)])          
+        
 parser = argparse.ArgumentParser(description="Training script for dwarp diffeomorphic registration to template. TetraReg segmentation-based initialization")
 
 # training and validation data
@@ -176,7 +179,7 @@ save_callback = tf.keras.callbacks.ModelCheckpoint(args.model, monitor=monitor, 
 csv_logger = tf.keras.callbacks.CSVLogger(args.model[:-3] + '_losses.csv', append=True, separator=',')
 imgdir = os.path.join(os.path.dirname(args.model), 'imgs')
 os.makedirs(imgdir, exist_ok=True)
-plot_reg = dwarp.callbacks.plotImgReg(sample[1][0], sample[0][0], os.path.join(imgdir, 'img'), modeltype='diffeo2template')
+# plot_reg = dwarp.callbacks.plotImgReg(sample[1][0], sample[0][0], os.path.join(imgdir, 'img'), modeltype='diffeo2template')
 
 hist = model.fit(gen_train,
                  validation_data=gen_val,
@@ -184,8 +187,8 @@ hist = model.fit(gen_train,
                  initial_epoch=initial_epoch,
                  epochs=args.epochs,
                  steps_per_epoch=steps_per_epoch,
-                 callbacks=[save_callback, csv_logger, plot_reg],
-                 verbose=1)
+                 callbacks=[save_callback, csv_logger], # plot_reg],
+                 verbose=2)
 
 dwarp.utils.plot_losses(args.model[:-3] + '_losses.csv', is_val=args.val_data is not None)
 

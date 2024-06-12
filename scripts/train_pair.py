@@ -175,7 +175,7 @@ save_callback = tf.keras.callbacks.ModelCheckpoint(args.model, monitor=monitor, 
 csv_logger = tf.keras.callbacks.CSVLogger(args.model[:-3] + '_losses.csv', append=True, separator=',')
 imgdir = os.path.join(os.path.dirname(args.model), 'imgs')
 os.makedirs(imgdir, exist_ok=True)
-plot_reg = dwarp.callbacks.plotImgReg(sample[0][1], sample[0][0], os.path.join(imgdir, 'img'), modeltype='diffeo_pair')
+# plot_reg = dwarp.callbacks.plotImgReg(sample[0][1], sample[0][0], os.path.join(imgdir, 'img'), modeltype='diffeo_pair')
 
 hist = model.fit(gen_train,
                  validation_data=gen_val,
@@ -183,7 +183,7 @@ hist = model.fit(gen_train,
                  initial_epoch=initial_epoch,
                  epochs=args.epochs,
                  steps_per_epoch=steps_per_epoch,
-                 callbacks=[save_callback, csv_logger, plot_reg],
+                 callbacks=[save_callback, csv_logger], #, plot_reg],
                  verbose=1)
 
 utils.plot_losses(args.model[:-3] + '_losses.csv', is_val=is_val)
