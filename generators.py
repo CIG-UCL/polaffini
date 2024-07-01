@@ -187,7 +187,7 @@ def mov2atlas_initialized(mov_files,
         ind_batch = np.random.choice(range(0, len(mov_files)), size=batch_size, replace=False)
         mov_imgs = [] 
         mov_segs = []
-        for i in ind_batch:        
+        for i in ind_batch:    
             mov_img = sitk.ReadImage(mov_files[i])
             mov_img = sitk.GetArrayFromImage(mov_img)[np.newaxis,..., np.newaxis]           
             mov_imgs += [mov_img]         

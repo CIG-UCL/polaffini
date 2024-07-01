@@ -1,5 +1,5 @@
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # remove this for more tensorflow logs
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' # remove this for more tensorflow logs
 import sys
 maindir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(maindir)
@@ -14,6 +14,10 @@ import argparse
 import pathlib
 from typing import Optional
 
+import faulthandler
+with open('/scratch0/NOT_BACKED_UP/alegouhy/tmp/fault.log', 'w') as f:
+    faulthandler.enable(file=f)
+    
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 parser = argparse.ArgumentParser(description="")
@@ -21,7 +25,7 @@ parser = argparse.ArgumentParser(description="")
 parser.add_argument('-M', '--model', type=pathlib.Path, required=True, help="Path to the model (.h5).")
 parser.add_argument('-np', '--nb-passes', type=int, required=False, default=1, help="Number of passes. Default: 1.")
 # input files
-parser.add_argument('-m', '--mov-img', type=pathlib.Path, required=True, help='Path to the moving image. May be a single file or a directory contining multiple images.')
+parser.add_argument('-m', '--mov-img', type=pathlib.Path, required=True, help='Path to the moving image. May be a single file or a directory containing multiple images.')
 parser.add_argument('-g', '--geom', type=str, required=False, default='mni1', help="Path to geometry image for resampling, can be 'mni1' or 'mni2'. Default: same as ref for training.")
 parser.add_argument('-ms', '--mov-seg', type=pathlib.Path, required=False, default=None, help='Path to the moving segmentation (only required for POLAFFINI initialization). Must be a directory if -m is also a directory, where segmentations are saved with the same filename as their corresponding moving image')
 parser.add_argument('-rs', '--ref-seg', type=str, required=False, default=None, help="Path to the reference template segmentation, can be 'mni1' or 'mni2' (only required for POLAFFINI initialization).")
@@ -69,7 +73,7 @@ if mov_seg_path is None and (args.polaffini or out_seg_path is not None):
 if args.ref_seg is None and (args.polaffini):
     sys.exit("\nNeed a reference segmentation.")
 
-print('\nLoading model and images...')
+print('\nLoading model...')
 
 if args.ref_seg == "mni2":
     args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt_2mm.nii.gz')
@@ -87,22 +91,19 @@ ndims = len(inshape)
 matO = np.asmatrix(model.config.params['orientation'])
 origin, spacing, direction = utils.decomp_matOrientation(matO)
 
-paired_img_segs: list[tuple[pathlib.Path, Optional[pathlib.Path]]] = []
-
 if mov_img_path.is_file():
-    paired_img_segs = [(mov_img_path, mov_seg_path if args.polaffini else None)]
-else:
-    moving_image_names = [f for f in os.listdir(mov_img_path) if mov_img_path.joinpath(f).is_file()]
-
+    mov_img_names = [mov_img_path.name]
+    mov_img_path = mov_img_path.parent
     if args.polaffini:
-        seg_image_names = [f for f in os.listdir(mov_seg_path) if mov_seg_path.joinpath(f).is_file()]
-        common_image_names = set(moving_image_names).intersection(set(seg_image_names))
-        for image_name in sorted(list(common_image_names)):
-            paired_img_segs.append((mov_img_path.joinpath(image_name), mov_seg_path.joinpath(image_name)))
-    else:
-        for image_name in moving_image_names:
-            paired_img_segs.append((mov_img_path.joinpath(image_name), None))
-
+        mov_seg_names = [mov_seg_path.name]
+        mov_seg_path = mov_seg_path.parent
+else:
+    mov_img_names = sorted([f.name for f in mov_img_path.glob('*') if f.is_file]) 
+    if args.polaffini:
+        mov_seg_names = sorted([f.name for f in mov_seg_path.glob('*') if f.is_file])
+        if len(mov_seg_names) != len(mov_img_names):
+            sys.exit("\nNot the same number of images and segmentations.")
+            
 geom: Optional[sitk.Image] = None
 if out_img_path is not None or out_seg_path is not None or out_transfo_path is not None:
     if args.geom == "mni2":
@@ -113,17 +114,18 @@ if out_img_path is not None or out_seg_path is not None or out_transfo_path is n
         geom_file = args.geom
     geom = utils.imageIO(geom_file).read()
 
-i = 1
-for image_path, segmentation_path in paired_img_segs:
-    image_name = image_path.name
 
-    print(f"\nRegistering \"{image_name}\" ({i}/{len(paired_img_segs)})")
-    i+= 1
+for i in range(len(mov_img_names)):
 
-    moving = utils.imageIO(image_path).read()
+    print(f"\nRegistration {i+1}/{len(mov_img_names)}")
+    print(f" - img: {mov_img_names[i]}")
+    if args.polaffini:
+        print(f" - seg: {mov_seg_names[i]}")
+
+    moving = utils.imageIO(mov_img_path.joinpath(mov_img_names[i])).read()
 
     if args.polaffini:
-        moving_seg = utils.imageIO(segmentation_path).read()
+        moving_seg = utils.imageIO(mov_seg_path.joinpath(mov_seg_names[i])).read()
 
         print('Initializing through POLAFFINI...')
         init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=moving_seg,
@@ -196,20 +198,20 @@ for image_path, segmentation_path in paired_img_segs:
     if out_img_path is not None or out_seg_path is not None or out_transfo_path is not None or out_svf_path is not None:
         print('Writing output files...')
         if out_img_path is not None:
-            out_path = out_img_path if out_img_path.suffix != "" else out_img_path.joinpath(image_name)
+            out_path = out_img_path if out_img_path.suffix != "" else out_img_path.joinpath(mov_img_names[i])
             utils.imageIO(out_path).write(moved)
         if out_seg_path is not None:
-            out_path = out_seg_path if out_seg_path.suffix != "" else out_seg_path.joinpath(image_name)
+            out_path = out_seg_path if out_seg_path.suffix != "" else out_seg_path.joinpath(mov_seg_names[i])
             utils.imageIO(out_path).write(moved_seg)
         if out_transfo_path is not None:
-            image_without_extension = image_name.split(".")[0]
-            out_path = out_transfo_path if out_transfo_path.suffix != "" else out_transfo_path.joinpath(f"{image_without_extension}.nii.gz")
+            mov_img_name_noext = mov_img_names[i].split(".")[0]
+            out_path = out_transfo_path if out_transfo_path.suffix != "" else out_transfo_path.joinpath(f"{mov_img_name_noext}.nii.gz")
             tr2disp = sitk.TransformToDisplacementFieldFilter()
             tr2disp.SetReferenceImage(geom)
             utils.imageIO(out_path).write(tr2disp.Execute(transfo_full))
         if out_svf_path is not None:
-            image_without_extension = image_name.split(".")[0]
-            out_path = out_svf_path if out_svf_path.suffix != "" else out_svf_path.joinpath(f"{image_without_extension}.nii.gz")
+            mov_img_name_noext = mov_img_names[i].split(".")[0]
+            out_path = out_svf_path if out_svf_path.suffix != "" else out_svf_path.joinpath(f"{mov_img_name_noext}.nii.gz")
             svf = utils.get_real_field(svf, matO)
             svf = sitk.GetImageFromArray(svf[0, ...], isVector=True)
             svf.SetDirection(direction)
