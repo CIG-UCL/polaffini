@@ -167,7 +167,7 @@ def integrate_svf(svf, int_steps=7):
     return compo_transfo
 
 
-def integrate_svf_lowMem(svf, int_steps=7):
+def integrate_svf_lowMem(svf, int_steps=7, out_tr=True):
     
     ndims = svf.GetDimension()
 
@@ -177,14 +177,18 @@ def integrate_svf_lowMem(svf, int_steps=7):
     # squaring
     resampler = sitk.ResampleImageFilter()
     resampler.SetInterpolator(sitk.sitkLinear)
+    resampler.SetUseNearestNeighborExtrapolator(True)
     resampler.SetReferenceImage(svf)
     for _ in range(int_steps): 
         svf0 = copy.deepcopy(svf)
         transfo = sitk.DisplacementFieldTransform(svf)    
         resampler.SetTransform(transfo)
         svf = svf0 + resampler.Execute(svf0)
-
-    return sitk.DisplacementFieldTransform(svf)
+    
+    if out_tr:
+        return sitk.DisplacementFieldTransform(svf)
+    else:
+        return svf
 
     
 def get_full_transfo(aff_init, polyAff_svf, invert=False):
