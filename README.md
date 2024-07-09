@@ -5,7 +5,7 @@ This repository contains code for:
  - **dwarp**: tools for deep learning non-linear image registration to a template, and more...
    - Subject to single template
    - Subject to subject (pairwise)
-   - **Eddeep** [3]: eddy-currents distortion correction [:warning: SOON AVAILABLE]
+   - **Eddeep** [3]: eddy-currents distortion correction [ :warning: SOON AVAILABLE]
 
 Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK (conversion through nibabel for mgh/mgz files), deep-learning registration uses Voxelmorph [2] core.
 
@@ -35,11 +35,11 @@ or very quickly using pre-trained deep-learning models like:
  - SynthSeg [`mri_synthseg` in Freesurfer][[paper]](https://doi.org/10.1016/j.media.2023.102789) which is contrast agnostic.
 
  
-## 1. Small POLAFFINI tutorial
+## A.1. Small POLAFFINI tutorial
 A good way to understand how it works is to go through the following small tutorial: `dwarp_public/scripts/polaffini_example.py`.\
 This script uses the data available `dwarp_public/exmaple_data`. Extract and tweak bits to fit your needs.
 
-## 2. POLAFFINI between 2 subjects
+## A.2. POLAFFINI between 2 subjects
 
 The following script covers most usage, it performs POLAFFINI registration between two subjects.\
 It uses the moving and target segmentations to estimate the polyaffine transformation, then applies the transformation to the moving image.
@@ -50,7 +50,7 @@ python <path-to-dwarp_public>/scripts/polaffini_pair.py -m <path-to-moving-image
                                                         -oi <path-to-output-moved-image>
 ```
 
-## 3. POLAFFINI of a dataset onto a template
+## A.3. POLAFFINI of a dataset onto a template
 
 The script `/scripts/polaffini_set2template.py` allows to perform POLAFFINI on a set of subjects as well as various data preparation such as intensity normalization, one-hot encoding of segmentations... It can be typically used to prepare the data to be fed to a deep-learning model during its training.\
 See Section B.2.a. for an example.
@@ -62,7 +62,7 @@ This tutorial requires an MR dataset containing homologous data of 2 types:
  - T1-weighted images, skull-stripped.
  - Segmentations, DKT protocol. Can been obtained using FreeSurfer, FastSurfer, SynthSeg...
 
-## 1. Using a pre-trained model
+## B.1. Using a pre-trained model
 :warning: `diffeo2mni.h5` is not ready yet. Pre-trained models will be added soon.
 ```bash
 python <path-to-dwarp_public>/register.py -M <path-to-dwarp-public-directory>/diffeo2mni.h5\
@@ -91,9 +91,9 @@ python scripts/register.py -m <path-to-moving-images-directory> \
                            -oi <path-to-output-moved-images-directory>
 ```
    
-## 2. Training a new registration model from scratch
+## B.2. Training a new registration model from scratch
 
-### a. POLAFFINI and data preparation
+### B.2.a. POLAFFINI and data preparation
 The `dwarp_public/script/init_polaffini.py` script is designed to carry out 2 tasks:
  - Perform POLAFFINI.
  - Prepare the data for training: resizing, intensity normalization, one-hot encoding for segmentations...
@@ -123,7 +123,7 @@ The output directories will be organized as follow:\
 &ensp; └ transfo (if `-ot 1`) - folder containing transformations (an affine transformation and a polyaffine one in SVF form)
 
 
-### b. Model training ###
+### B.2.b. Model training ###
 ```
 python <path-to-dwarp_public>/scripts/train.py -o <path-to-output-directory>/model.h5\
                                                -e 1000\
@@ -139,12 +139,19 @@ Use `-h` to show more options and display help.\
 
 # C. EDDEEP
 :warning: The code for Eddeep is getting cleaned-up and optimized, it will be released before MICCAI 2024 start date. Implementation from [3] is relatively straightforward though. 
+
 <p align="center">
 <img src="imgs/diagram_eddeep.svg" width="85%">
 </p>
-## 1. Training the translator
-## 2. Training the registrator (given a pre-trained translator)
 
+## C.1. Training the translator
+[soon]
+
+## C.2. Training the registrator (given a pre-trained translator)
+[soon]
+
+## C.3. Perform correction of eddy-current distortions (given a pre-trained translator + registrator)
+[soon]
 
 # Included ressources
   - MNI template: The default MNI template used here is the [ICBM 2009c Nonlinear Symmetric](https://www.mcgill.ca/bic/icbm152-152-nonlinear-atlases-version-2009) version. One can find it, together with its associated DKT segmentation, in `dwarp_public/ref/` with voxel sizes 1 and 2 mm isotropic.
