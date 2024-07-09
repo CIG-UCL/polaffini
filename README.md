@@ -5,7 +5,7 @@ This repository contains code for:
  - **dwarp**: tools for deep learning non-linear image registration to a template, and more...
    - Subject to single template
    - Subject to subject (pairwise)
-   - **Eddeep** [3]: eddy-currents distortion correction [ :warning: SOON AVAILABLE]
+   - **Eddeep** [3]: eddy-currents distortion correction [ :warning: SOON AVAILABLE (before MICCAI 2024 starts)]
 
 Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK (conversion through nibabel for mgh/mgz files), deep-learning registration uses Voxelmorph [2] core.
 
