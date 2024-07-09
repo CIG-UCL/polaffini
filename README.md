@@ -3,8 +3,11 @@
 This repository contains code for:
  - **POLAFFINI** [1]: a segmentation-based polyaffine initialization for improved non-linear image registration. 
  - **dwarp**: tools for deep learning non-linear image registration to a template, and more...
+   - Subject to single template
+   - Subject to subject (pairwise)
+   - **Eddeep** [3]: eddy-currents distortion correction [:warning: SOON AVAILABLE]
 
-Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK (conversion through nibabel for mgh/mgz files), deep-learning registration uses Voxelmorph [2] core.\
+Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK (conversion through nibabel for mgh/mgz files), deep-learning registration uses Voxelmorph [2] core.
 
 # Installation
 
@@ -133,13 +136,24 @@ Use `-h` to show more options and display help.\
 `-l nlcc` indicates the normalized squared local correlation coefficient is used as image loss.\
 `-ls dice` indicates that Dice score is used as segmentation loss.
 
+
+# C. EDDEEP
+:warning: The code for Eddeep is getting cleaned-up and optimized, it will be released before MICCAI 2024 start date. Implementation from [3] is relatively straightforward though. 
+<p align="center">
+<img src="imgs/diagram_eddeep.svg" width="85%">
+</p>
+## 1. Training the translator
+## 2. Training the registrator (given a pre-trained translator)
+
+
 # Included ressources
   - MNI template: The default MNI template used here is the [ICBM 2009c Nonlinear Symmetric](https://www.mcgill.ca/bic/icbm152-152-nonlinear-atlases-version-2009) version. One can find it, together with its associated DKT segmentation, in `dwarp_public/ref/` with voxel sizes 1 and 2 mm isotropic.
   - Pre-trained model: `diffeo2mni.h5` is a pre-trained model for non-linear registration to the MNI template. The training procedure is the one depicted in section Training a new registration model from scratch. The training dataset have been constituted using T1-weighted images from 100 subjects (20 UKBiobank, 20 IXI, 60 ADNI (20 HC, 20 MCI, 20 AD)), with 25 subjects for validation (5 UKBiobank, 5 IXI, 15 ADNI (5 HC, 5 MCI, 5 AD)). Segmentation following the DKT protocol were obtain using Fastsurfer, skull-stripping of the T1-weighted images was achieved through merging and closing of the brain labels of the segmentation.The MNI version is the one depicted above with voxel size 2 mm istropic. The image loss was the normalized squared local correlation coefficient (nlcc), regularization loss had a weight of 1, segmentation was leveraged during training using a Dice loss with weight 0.01.
     
 # References
   - [1] **POLAFFINI** [[IPMI 2023 paper]](https://link.springer.com/content/pdf/10.1007/978-3-031-34048-2_47.pdf?pdf=inline%20link).
-
+  - [3] **EDDEEP** [[MICCAI 2024 paper]](https://arxiv.org/abs/2405.10723)
+    
 # External repositories and references
   - [2] **Voxelmorph** [[github]](https://github.com/voxelmorph/voxelmorph) - a general purpose library for learning-based tools for alignment/registration, and more generally modelling with deformations. In addition to the code, a list of their papers is available there. Especially, if using **dwarp**, please cite Voxelmorph's TMI 2019 [[arxiv]](https://arxiv.org/abs/1809.05231), MedIA 2019 [[arxiv]](https://arxiv.org/abs/1903.03545) and MICCAI 2018 [[arxiv]](https://arxiv.org/abs/1805.04605) articles.
 
