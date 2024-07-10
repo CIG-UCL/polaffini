@@ -7,7 +7,7 @@ import numpy as np
 import SimpleITK as sitk
 import tensorflow as tf      
 tf.config.experimental.set_visible_devices([], 'GPU')    
-import utils
+import polaffini.utils as utils
 import dwarp
 import polaffini.polaffini as polaffini
 import argparse

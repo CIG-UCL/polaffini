@@ -6,7 +6,7 @@ if dwarp_public_path == '':
 import os
 os.chdir(dwarp_public_path)
 
-import utils
+import polaffini.utils as utils
 import polaffini.polaffini as polaffini
 import SimpleITK as sitk
 import time
