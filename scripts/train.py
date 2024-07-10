@@ -9,7 +9,7 @@ import voxelmorph
 import dwarp
 import SimpleITK as sitk
 import argparse
-import generators
+import dwarp.generators as generators
 import polaffini.utils as utils
 
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))

@@ -1,6 +1,6 @@
 import numpy as np
 import SimpleITK as sitk        
-import utils
+import polaffini.utils as utils
 
 def mov2atlas_res(mov_files, 
                   ref_file,
