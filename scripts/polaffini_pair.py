@@ -4,7 +4,7 @@ maindir = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(maindir)
 import SimpleITK as sitk   
 import argparse   
-import utils
+import polaffini.utils as utils
 import polaffini.polaffini as polaffini
 
 def polaffini_pair():

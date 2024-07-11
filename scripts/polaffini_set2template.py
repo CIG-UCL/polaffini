@@ -7,7 +7,7 @@ import glob
 import numpy as np
 import SimpleITK as sitk    
 import argparse  
-import utils
+import polaffini.utils as utils
 import polaffini.polaffini as polaffini
 
 parser = argparse.ArgumentParser(description="POLAFFINI segmentation-based initialization for non-linear registration to template.")

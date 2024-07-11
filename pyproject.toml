@@ -35,8 +35,14 @@ dwarp = [
 [tool.setuptools]
 packages = [
          "polaffini",
+         "polaffini.scripts",
          "dwarp"
 ]
 
+[tool.setuptools.package-dir]
+polaffini = "polaffini"
+"polaffini.scripts" = "scripts"
+dwarp = "dwarp"
+
 [project.scripts]
-polaffini = "scripts.polaffini_pair:polaffini_pair"
+polaffini = "polaffini.scripts.polaffini_pair:polaffini_pair"
