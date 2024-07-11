@@ -261,6 +261,121 @@ class diffeo2atlas(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDens
         y_img = layers.SpatialTransformer(interp_method=interp_method)([img_input, warp_model.output[1]])
         return tf.keras.Model(warp_model.inputs + [img_input], y_img).predict([src, img], verbose=0)
 
+
+
+class diffeo_pair_seg(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDense network.
+    """
+    Network for diffeomorphic pairwise registration with segmentation.
+    """
+
+    @ne.modelio.store_config_args
+    def __init__(self,
+                 inshape,
+                 nb_labs=None,
+                 nb_enc_features=[16, 32, 32, 32, 32],
+                 nb_dec_features=[32, 32, 32, 32, 32, 16, 16],
+                 nb_unet_conv_per_level=1,
+                 int_steps=7,
+                 src_feats=1,   
+                 trg_feats=1,
+                 name='diffeo2atlas'):
+        """ 
+        Parameters:
+            inshape: Input shape. e.g. (192, 192, 192)
+            nb_enc_features: encoder convolutional features. Can be specified via a list or as a single integer. 
+            nb_unet_levels: Number of levels in unet. Only used when nb_unet_features is an integer. Default is None.
+            unet_feat_mult: Per-level feature multiplier. Only used when nb_unet_features is an integer. Default is 1.
+            nb_unet_conv_per_level: Number of convolutions per unet level. Default is 1.
+            src_feats: Number of moving image features. Default is 1.
+            input_model: Model to replace default input layer before concatenation. Default is None.
+            name: Model name - also used as layer name prefix. Default is 'aff2atlas'.
+        """
+        
+        # ensure correct dimensionality
+        ndims = len(inshape)
+        assert ndims in [2, 3], 'ndims should be one of 2, or 3. found: %d' % ndims
+        
+        target = tf.keras.Input(shape=(*inshape, trg_feats), name='%s_target_input' % name)  
+        moving = tf.keras.Input(shape=(*inshape, src_feats), name='%s_moving_input' % name)      
+        target_seg = tf.keras.Input(shape=(*inshape, nb_labs), name='%s_target_seg_input' % name) 
+        moving_seg = tf.keras.Input(shape=(*inshape, nb_labs), name='%s_moving_seg_input' % name) 
+
+        input_model = tf.keras.Model(inputs=[moving, target], outputs=[moving, target])
+
+        # build core unet model and grab inputs
+        unet_model = voxelmorph.networks.Unet(input_model=input_model,
+                                              nb_features=[nb_enc_features, nb_dec_features],
+                                              nb_conv_per_level=nb_unet_conv_per_level)
+        
+        # build diffeo transfo
+        Conv = getattr(KL, 'Conv%dD' % ndims)
+        svf = Conv(ndims, kernel_size=3, padding='same',
+                   kernel_initializer=KI.RandomNormal(mean=0.0, stddev=1e-5),   
+                   name='%s_svf' % name)(unet_model.output)
+
+        ## SVF integration into diffeo
+        defo_pos = voxelmorph.layers.VecInt(method='ss', name='%s_int_pos' % name, int_steps=int_steps)(svf)
+        defo_neg = voxelmorph.layers.VecInt(method='ss', name='%s_int_neg' % name, int_steps=int_steps)(-svf)
+
+        
+        # warp image with diffeomorphic transformation      
+        moved_pos = voxelmorph.layers.SpatialTransformer(interp_method='linear',
+                                                         indexing='ij',
+                                                         name='res_img_pos')([moving, defo_pos])
+        moved_seg_pos = voxelmorph.layers.SpatialTransformer(interp_method='nearest',
+                                                             indexing='ij',
+                                                             name='res_seg_pos')([moving_seg, defo_pos])
+        moved_neg = voxelmorph.layers.SpatialTransformer(interp_method='linear',
+                                                         indexing='ij',
+                                                         name='res_img_neg')([target, defo_neg])
+        moved_seg_neg = voxelmorph.layers.SpatialTransformer(interp_method='nearest',
+                                                             indexing='ij',
+                                                             name='res_seg_neg')([target_seg, defo_neg])
+        
+        dummy_layer = KL.Lambda(lambda x: x, name='img_pos')
+        moved_pos = dummy_layer(moved_pos)
+        dummy_layer = KL.Lambda(lambda x: x, name='img_neg')
+        moved_neg = dummy_layer(moved_neg)
+        dummy_layer = KL.Lambda(lambda x: x, name='seg_pos')
+        moved_seg_pos = dummy_layer(moved_seg_pos)
+        dummy_layer = KL.Lambda(lambda x: x, name='seg_neg')
+        moved_seg_neg = dummy_layer(moved_seg_neg)
+        dummy_layer = KL.Lambda(lambda x: x, name='reg')
+        svf = dummy_layer(svf)
+        
+        inputs = [moving, target, moving_seg, target_seg]
+        outputs = [moved_pos, moved_neg, moved_seg_pos, moved_seg_neg, svf]
+
+
+        super().__init__(name=name, inputs=inputs, outputs=outputs)
+
+        # cache pointers to layers and tensors for future reference
+        self.references = ne.modelio.LoadableModel.ReferenceContainer()
+        self.references.ndims = ndims
+        self.references.moved_pos = moved_pos
+        self.references.moved_neg = moved_neg
+        self.references.moved_seg_pos = moved_seg_pos
+        self.references.moved_seg_neg = moved_seg_neg
+        self.references.defo_pos = defo_pos
+        self.references.defo_neg = defo_neg
+        self.references.svf = svf
+        
+        
+    def get_registration_model(self):
+        """
+        Returns a reconfigured model to predict only the final transform.
+        """
+        return tf.keras.Model(self.inputs[:2], 
+                             [self.references.moved_pos, self.references.moved_neg,
+                              self.references.defo_pos, self.references.defo_neg, self.references.svf])
+
+    def register(self, src, trg):
+        """
+        Predicts the transform from src to atlas.
+        """
+        return self.get_registration_model().predict([src, trg], verbose=0)
+    
+    
         
 
 class sudistoc(ne.modelio.LoadableModel):

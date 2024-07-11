@@ -1,9 +1,44 @@
+import os
 import tensorflow as tf
 import voxelmorph
 import matplotlib.pyplot as plt
 import numpy as np
 from . import utils, layers, losses
+
+
 class plotImgReg(tf.keras.callbacks.Callback):
+   
+    def __init__(self, ref, mov, img_prefix, dim=0, modeltype='diffeo_pair'):
+        self.dim = dim
+        self.ref = ref
+        self.mov = mov
+        center = np.mean(np.where(ref[0,...,0]>0), axis=1)
+        self.sl = int(center[dim])
+        self.img_prefix = img_prefix
+        self.modeltype = modeltype
+        
+    def on_epoch_begin(self, epoch, logs=None):
+        if self.modeltype == 'diffeo_pair':
+            moved, _, _, _, _ = self.model.register(self.mov, self.ref)
+        elif self.modeltype == 'diffeo2template':
+            moved, _, _ = self.model.register(self.mov)
+        moved = moved[0, ..., 0]
+        moved = moved.take(self.sl, axis=self.dim)[...,np.newaxis]
+        moved= np.uint8(moved * [0,127,255])
+        
+        ref = self.ref[0, ..., 0]
+        ref = ref.take(self.sl, axis=self.dim)[...,np.newaxis]
+        ref = np.uint8(ref * [255,127,0])
+
+        if self.dim in (1, 2):
+            ref = np.flipud(ref)
+            moved = np.flipud(moved)
+        img = np.concatenate((ref, moved, ref+moved), axis=1)
+
+        plt.imsave(self.img_prefix + '_' + str(epoch) + '.jpg', img)
+
+
+class plotImgReg2(tf.keras.callbacks.Callback):
    
     def __init__(self, x, sl_sag, sl_axi, is_aux=False, is_weighted=False):
         self.is_aux = is_aux

@@ -50,7 +50,7 @@ def estimateTransfo(mov_seg, ref_seg,
     mov_seg = sitk.Cast(mov_seg, sitk.sitkInt64)
     
     labs, _, _ = get_common_labels(ref_seg, mov_seg, omit_labs=omit_labs)
- 
+    
     ref_seg_down = sitk.Shrink(ref_seg, [int(down_factor)]*ndims)    
     
     get_volumes = False
@@ -98,6 +98,11 @@ def estimateTransfo(mov_seg, ref_seg,
                 rows_l, _ = np.where(DT == lab)
                 connected_labs = np.unique(DT[rows_l])
                 ind = [i in connected_labs for i in labs]       
+            
+            if transfos_type == 'affine' and sum(ind) < 4:
+                continue
+            if transfos_type == 'rigid' and sum(ind) < 2:
+                continue
                 
             loc_mat = opti_linear_transfo_between_point_sets(ref_pts[ind, :], 
                                                              mov_pts[ind, :], 
@@ -134,7 +139,7 @@ def estimateTransfo(mov_seg, ref_seg,
     
     else:
         polyAff_svf = None
-        
+
     return aff_init, polyAff_svf
 
 
@@ -162,7 +167,7 @@ def integrate_svf(svf, int_steps=7):
     return compo_transfo
 
 
-def integrate_svf_lowMem(svf, int_steps=7):
+def integrate_svf_lowMem(svf, int_steps=7, out_tr=True):
     
     ndims = svf.GetDimension()
 
@@ -172,14 +177,18 @@ def integrate_svf_lowMem(svf, int_steps=7):
     # squaring
     resampler = sitk.ResampleImageFilter()
     resampler.SetInterpolator(sitk.sitkLinear)
+    resampler.SetUseNearestNeighborExtrapolator(True)
     resampler.SetReferenceImage(svf)
     for _ in range(int_steps): 
         svf0 = copy.deepcopy(svf)
         transfo = sitk.DisplacementFieldTransform(svf)    
         resampler.SetTransform(transfo)
         svf = svf0 + resampler.Execute(svf0)
-
-    return sitk.DisplacementFieldTransform(svf)
+    
+    if out_tr:
+        return sitk.DisplacementFieldTransform(svf)
+    else:
+        return svf
 
     
 def get_full_transfo(aff_init, polyAff_svf, invert=False):

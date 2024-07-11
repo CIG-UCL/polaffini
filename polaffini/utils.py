@@ -120,11 +120,11 @@ def get_matOrientation(img, decomp=False):
         return (origin, spacing, direction)
     
     else:
-        matO = np.matmul(np.diag(spacing), np.reshape(direction,(ndims, ndims)))
+        matO = np.matmul(np.reshape(direction,(ndims, ndims)), np.diag(spacing))
         matO = np.concatenate((matO, np.reshape(origin, (ndims,1))), axis=1)
         matO = np.concatenate((matO, np.reshape([0]*ndims+[1], (1,ndims+1))), axis=0)
         return matO
-    
+  
     
 def decomp_matOrientation(matO):
     """
@@ -133,11 +133,12 @@ def decomp_matOrientation(matO):
     
     ndims = matO.shape[1]-1
     mat = matO[0:ndims, 0:ndims]   
-    spacing = np.linalg.norm(mat, axis=1)
-    direction = np.squeeze(np.asarray(np.matmul(np.diag(1/spacing), mat)))
+    spacing = np.linalg.norm(mat, axis=0)
+    direction = np.squeeze(np.asarray(np.matmul(mat, np.diag(1/spacing))))
     origin = np.squeeze(np.asarray(matO[0:ndims, ndims]))
     
     return (origin, spacing, direction.ravel())
+
 
 
 def resample_image(img, size, matO, interp):
@@ -202,6 +203,51 @@ def normalize_intensities(img, wmin=0, wmax=None, omin=0, omax=1, dtype=sitk.sit
         
     if not listed:
         img = img[0]
+    
+    return img
+
+
+def change_img_res(img, vox_sz=[2,2,2], interp=sitk.sitkLinear):
+    """
+    Change the resolution while keeping the position and all.
+    """
+    
+    ndims = img.GetDimension()
+    direction = list(img.GetDirection()) 
+    spacing = list(img.GetSpacing())
+    origin = list(img.GetOrigin())
+    size = list(img.GetSize())
+
+    size_new = [int(size[d] * spacing[d] / vox_sz[d]) for d in range(ndims)]
+    true_vox_sz = [size[d] * spacing[d] / size_new[d] for d in range(ndims)]
+    origin_new = [origin[d] + (true_vox_sz[d] - spacing[d]) / 2 for d in range(ndims)]
+    
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetSize(size_new)
+    resampler.SetOutputOrigin(origin_new)
+    resampler.SetOutputSpacing(true_vox_sz)
+    resampler.SetOutputDirection(direction)
+    resampler.SetInterpolator(interp)
+    
+    return resampler.Execute(img)
+    
+
+def change_img_size(img, grid_sz=[96,128,96]):
+    
+    size = img.GetSize()
+    
+    center = np.flip(np.floor(np.mean(np.array(np.where(sitk.GetArrayFromImage(img))), axis=1)))
+    half_sz = np.floor(np.array(grid_sz) / 2)
+    bound_inf = (center - half_sz).astype(np.int16)
+    bound_sup = (center + grid_sz - half_sz - size).astype(np.int16)
+    
+    pad_bound_inf = (np.abs(bound_inf) * (bound_inf < 0)).tolist()
+    pad_bound_sup = (bound_sup * (bound_sup > 0)).tolist()
+    crop_bound_inf = (bound_inf * (bound_inf > 0)).tolist()
+    crop_bound_sup = (np.abs(bound_sup) * (bound_sup < 0)).tolist()
+    
+    img = sitk.ConstantPad(img, pad_bound_inf, pad_bound_sup)
+    img = sitk.Crop(img, crop_bound_inf, crop_bound_sup)
     
     return img
 

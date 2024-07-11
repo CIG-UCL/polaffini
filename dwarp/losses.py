@@ -31,7 +31,7 @@ class wMSE:
     
     
     
-class wLCC:  # extension VoxelMorph LCC loss from dev branch (not main!!)
+class wLCC:  # extension of VoxelMorph LCC loss from dev branch (not main!!)
     """
     Local (over window) correlation coefficient loss. (Copied on Voxelmorph).
     Handles weightmap (assumed to be concatenated to y_true on the last axis).
@@ -131,16 +131,37 @@ class Dice: # from VoxelMorph but modified for better div_no_nan handling
     N-D dice for segmentation
     """
     
+    def __init__(self, is_onehot=True, labels=None):
+        self.is_onehot = is_onehot
+        self.labels = labels
+        
     def loss(self, y_true, y_pred):
         
         ndims = len(y_pred.get_shape().as_list()) - 2
         vol_axes = list(range(1, ndims + 1))
     
+        if self.is_onehot:
+            dice = self.dice(y_true, y_pred, vol_axes)
+        else:
+            dice = []
+            for l in self.labels:
+                y_true_l = tf.cast(y_true == l, tf.uint16)
+                y_pred_l = tf.cast(y_pred == l, tf.uint16)           
+                dice += [self.dice(y_true_l, y_pred_l, vol_axes)]
+            
+        return -tf.reduce_mean(dice)
+     
+    def dice(self, y_true, y_pred, vol_axes):
+        
         top = 2 * tf.reduce_sum(y_true * y_pred, vol_axes)
         bottom = tf.reduce_sum(y_true + y_pred, vol_axes)
     
         div_no_nan = tf.math.divide_no_nan if hasattr(
             tf.math, 'divide_no_nan') else tf.div_no_nan  
-        dice = tf.reduce_mean(div_no_nan(top, bottom))
+        dice = div_no_nan(top, bottom)
         
-        return -dice
+        return dice
+        
+        
+        
+        
