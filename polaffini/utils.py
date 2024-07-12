@@ -4,6 +4,8 @@ import os
 import pathlib
 import tempfile
 import nibabel as nib
+import copy
+
 
 class imageIO:
     # SimpleITK is preferred to nibabel as the former has shown to be more reliable for orientation matrices.
@@ -271,4 +273,24 @@ def get_real_field(field, matO, nobatch=False):
     field_real = np.matmul(linearPartO, np.matmul(perm,field))     
     
     return field_real[..., 0]
+
+
+def integrate_svf(svf_img, int_steps=7):
     
+    ndims = svf_img.GetDimension()
+    
+    # scaling
+    svf_img = sitk.Compose([sitk.VectorIndexSelectionCast(svf_img, d)/(2**int_steps) for d in range(ndims)])
+    
+    # squaring
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetInterpolator(sitk.sitkLinear)
+    resampler.SetReferenceImage(svf_img)
+    for _ in range(int_steps): 
+        svf0_img = copy.deepcopy(svf_img)
+        transfo = sitk.DisplacementFieldTransform(svf_img)    
+        resampler.SetTransform(transfo)
+        svf_img = svf0_img + resampler.Execute(svf0_img)
+        
+    return sitk.DisplacementFieldTransform(svf_img)
+        

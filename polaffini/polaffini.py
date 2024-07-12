@@ -1,12 +1,13 @@
 import SimpleITK as sitk
 import numpy as np
 import scipy.spatial
+from scipy.linalg import logm, expm
 import copy
 
 #%% 
 
-def estimateTransfo(mov_seg, ref_seg,
-                    transfos_type='affine', dist='center',
+def estimateTransfo(mov_seg, ref_seg, alpha=1,
+                    transfos_type='affine', dist='center', out_jac=False,
                     omit_labs=[], sigma=15, weight_bg=1e-5, down_factor=4, bg_transfo=True):
     """
     Polyaffine image registration through label centroids matching. 
@@ -17,12 +18,18 @@ def estimateTransfo(mov_seg, ref_seg,
         Moving segmentation.
     ref_seg : ITK image.
         Reference segmentation.
+    alpha : float, optional
+        Position of the overall transformation on the diffeomorphic path 
+        from identity to the transfo from moving to reference (e.g. use 0.5 for half-way registration).
+        The default is 1.
     transfos_type : str, optional
         Type of the local transformations between neightborhoods of feature points.
         'affine', 'rigid', 'translation' or 'volrot' (uses volumes also). The default is 'affine'.
     dist : str, optional
         Distance used for the weight maps.
         'center': distance to neighborhood center, or 'maurer': distance to label. The default is 'center'.
+    out_jac : bool, optional
+        Also output the jacobian of the polyaffine SVF. The default is False.
     omit_labs : list, optional
         List of labels to omit. The default is [] (0 (background) is always omitted). 
     sigma : float, optional
@@ -47,6 +54,7 @@ def estimateTransfo(mov_seg, ref_seg,
     ref_seg = sitk.Cast(ref_seg, sitk.sitkInt64)
     
     ndims = ref_seg.GetDimension()
+
     mov_seg = sitk.Cast(mov_seg, sitk.sitkInt64)
     
     labs, _, _ = get_common_labels(ref_seg, mov_seg, omit_labs=omit_labs)
@@ -64,18 +72,25 @@ def estimateTransfo(mov_seg, ref_seg,
     
     aff_init = sitk.AffineTransform(ndims)
     if bg_transfo:
-        transfo_aff = opti_linear_transfo_between_point_sets(ref_pts, mov_pts, transfos_type)  
-        transfo_aff_inv = np.linalg.inv(transfo_aff)
-        aff_init.SetMatrix((transfo_aff[0:ndims, 0:ndims]).ravel())
-        aff_init.SetTranslation(transfo_aff[0:ndims, ndims])        
-        mov_pts = np.transpose(np.matmul(transfo_aff_inv[0:ndims, 0:ndims], np.transpose(mov_pts))
-                               + np.reshape(transfo_aff_inv[0:ndims, ndims], (ndims,1))) 
-    
+        transfo_aff = opti_linear_transfo_between_point_sets(ref_pts, mov_pts, transfos_type) 
+        transfo_aff_mov = expm(alpha*logm(transfo_aff)) 
+        transfo_aff_mov_inv = expm(-alpha*logm(transfo_aff)) 
+        transfo_aff_ref = expm((1-alpha)*logm(transfo_aff)) 
+
+        aff_init.SetMatrix((transfo_aff_mov[0:ndims, 0:ndims]).ravel())
+        aff_init.SetTranslation(transfo_aff_mov[0:ndims, ndims])        
+        mov_pts = np.transpose(np.matmul(transfo_aff_mov_inv[0:ndims, 0:ndims], np.transpose(mov_pts))
+                               + np.reshape(transfo_aff_mov_inv[0:ndims, ndims], (ndims,1))) 
+        ref_pts = np.transpose(np.matmul(transfo_aff_ref[0:ndims, 0:ndims], np.transpose(ref_pts))
+                               + np.reshape(transfo_aff_ref[0:ndims, ndims], (ndims,1)))    
     if sigma != float('inf'):
         
         weight_map_sum = sitk.Image(ref_seg_down.GetSize(), sitk.sitkFloat64)
         weight_map_sum.CopyInformation(ref_seg_down) 
-
+        if out_jac:
+            polyAff_svf_jac = sitk.GetImageFromArray(np.zeros(ref_seg_down.GetSize()[::-1] + (ndims**2,)), isVector=True)
+            polyAff_svf_jac.CopyInformation(ref_seg_down)
+            
         loc_transfo = sitk.AffineTransform(ndims)
         polyAff_svf = sitk.Image(ref_seg_down.GetSize(), sitk.sitkVectorFloat64)
         polyAff_svf.CopyInformation(ref_seg_down)
@@ -90,7 +105,7 @@ def estimateTransfo(mov_seg, ref_seg,
             maurerdist.SetSquaredDistance(True)
             maurerdist.SetUseImageSpacing(True)
 
-        for l, lab in enumerate(labs):          
+        for l, lab in enumerate(labs):         
             # Find local optimal local transfo
             if transfos_type == 'translation':
                 ind = [i == lab for i in labs]
@@ -109,7 +124,7 @@ def estimateTransfo(mov_seg, ref_seg,
                                                              ref_vol = ref_vols[l],
                                                              mov_vol = mov_vols[l],
                                                              transfos_type=transfos_type)   
-            loc_mat = scipy.linalg.logm(loc_mat)
+            loc_mat = alpha * logm(loc_mat)
             if not np.isrealobj(loc_mat):
                 continue
             
@@ -127,6 +142,10 @@ def estimateTransfo(mov_seg, ref_seg,
                 weight_map = sitk.Cast(weight_map, sitk.sitkFloat32)            
             weight_map = sitk.Exp(-weight_map/(2*sigma**2)) 
             
+            if out_jac:
+                loc_mat_flat = np.ravel(loc_mat[:ndims,:ndims])
+                polyAff_svf_jac += sitk.Compose([weight_map * loc_mat_flat[d] for d in range(ndims**2)])
+                
             # Update polyaffine with current field
             loc_transfo.SetMatrix((loc_mat[0:ndims, 0:ndims] + np.eye(ndims)).ravel())
             loc_transfo.SetTranslation(loc_mat[0:ndims, ndims])
@@ -136,11 +155,16 @@ def estimateTransfo(mov_seg, ref_seg,
         weight_map_sum += weight_bg*sigma*np.sqrt(2*np.pi)
 
         polyAff_svf = sitk.Compose([sitk.VectorIndexSelectionCast(polyAff_svf, d)/weight_map_sum for d in range(ndims)])
+        if out_jac:
+            polyAff_svf_jac = sitk.Compose([sitk.VectorIndexSelectionCast(polyAff_svf_jac, d)/weight_map_sum for d in range(ndims**2)])
     
     else:
         polyAff_svf = None
-
-    return aff_init, polyAff_svf
+    
+    if out_jac:
+        return aff_init, polyAff_svf, polyAff_svf_jac
+    else:
+        return aff_init, polyAff_svf
 
 
 
@@ -316,17 +340,51 @@ def opti_linear_transfo_between_point_sets(ref_pts, mov_pts,
     return loc_mat
 
 
-def get_real_grid_coord(img):
+def get_full_svf(aff_init, polyAff_svf, polyAff_svf_jac=None, bch_order=2):
     
-    ndims = img.GetDimension()
-    id2 = sitk.AffineTransform(ndims)
-    id2.SetMatrix(2*np.eye(ndims).ravel())
-    id2.GetMatrix()
+    ndims = polyAff_svf.GetDimension()
+    volshape = polyAff_svf.GetSize()[::-1]
+    origin = polyAff_svf.GetOrigin()
+    direction = polyAff_svf.GetDirection()
+    spacing = polyAff_svf.GetSpacing()
     
+    aff_mat = np.reshape(aff_init.GetParameters()[:-ndims], (ndims,ndims))
+    aff_mat = np.c_[aff_mat, aff_init.GetParameters()[ndims**2:]]
+    aff_mat = np.r_[aff_mat, np.reshape([0]*ndims+[1], (1,ndims+1))]
+    log_aff_mat = logm(aff_mat)
+    log_aff = sitk.AffineTransform(ndims)
+    log_aff.SetMatrix(np.ravel(log_aff_mat[:ndims,:ndims] + np.eye(ndims)))
+    log_aff.SetTranslation(log_aff_mat[:ndims,ndims])
     trsf2disp = sitk.TransformToDisplacementFieldFilter()
-    trsf2disp.SetReferenceImage(img)
+    trsf2disp.SetReferenceImage(polyAff_svf)
+    aff_svf = sitk.GetArrayFromImage(trsf2disp.Execute(log_aff))
+    aff_svf = aff_svf.reshape(volshape + (ndims,1))
+
+    polyAff_svf = sitk.GetArrayFromImage(polyAff_svf)
+    polyAff_svf = polyAff_svf.reshape(volshape + (ndims,1))
+
+    full_svf = aff_svf
+    if bch_order > 0:
+        full_svf += polyAff_svf
+    # full_svf = aff_svf  + polyAff_svf   # BCH formula order 1
     
-    return sitk.GetArrayFromImage(trsf2disp.Execute(id2))
-
-
-
+    if bch_order > 1: 
+        aff_svf_jac = np.ones(volshape + (ndims, ndims))
+        aff_svf_jac *= log_aff_mat[:ndims,:ndims].reshape([1]*ndims + [ndims,ndims])
+        
+        polyAff_svf_jac = sitk.GetArrayFromImage(polyAff_svf_jac).reshape(aff_svf_jac.shape)
+    
+        lie_bracket = np.matmul(aff_svf_jac, polyAff_svf) - np.matmul(polyAff_svf_jac, aff_svf)
+    
+        full_svf += lie_bracket / 2      # BCH formula order 2
+    
+    full_svf = full_svf.reshape(volshape + (ndims,)) 
+    full_svf = sitk.GetImageFromArray(full_svf, isVector=True)
+    full_svf.SetOrigin(origin)
+    full_svf.SetDirection(direction)
+    full_svf.SetSpacing(spacing)
+    
+    return full_svf
+    
+    
+    

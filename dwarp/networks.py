@@ -621,3 +621,78 @@ class encoder(tf.keras.Model): # Similar code to voxelmorph's Unet but truncated
             last = MaxPooling(max_pool[level], name='%s_enc_pooling_%d' % (name, level))(last)
 
         super().__init__(inputs=model_inputs, outputs=last, name=name)
+
+
+class pix2pix_dis(ne.modelio.LoadableModel): 
+    """patchGAN discriminator"""
+    
+    @ne.modelio.store_config_args
+    def __init__(self,
+                 volshape,
+                 nb_feats=[64,128,256,512],
+                 dropout=None, 
+                 name='patchGAN_dis'):
+        """
+        """
+        
+        x = KL.Input(shape=(*volshape, 1))
+        y = KL.Input(shape=(*volshape, 1))
+        inputs = KL.concatenate((x, y))
+ 
+        ndims = len(volshape)
+        
+        use_bias = False 
+        kw = 4
+        padw = 'same'
+        strides = [2]*ndims
+        Conv = getattr(KL, 'Conv%dD' % ndims)
+        
+        last = Conv(nb_feats[0], kernel_size=kw, strides=strides, padding=padw)(inputs)
+        last = KL.LeakyReLU(0.2)(last)
+        for n in range(1, len(nb_feats)-1): 
+            last = Conv(nb_feats[n], kernel_size=kw, strides=strides, padding=padw, use_bias=use_bias)(last)
+            last = KL.BatchNormalization()(last)
+            if dropout is not None:
+                last = KL.Dropout(dropout)(last)
+            last = KL.LeakyReLU(0.2)(last)
+        
+        last = Conv(nb_feats[-1], kernel_size=kw, strides=[1]*ndims, padding=padw, use_bias=use_bias)(last)
+        last = KL.BatchNormalization()(last)
+        last = KL.LeakyReLU(0.2)(last)
+        
+        last = Conv(1, kernel_size=kw, strides=[1]*ndims, padding=padw)(last)
+        last = tf.keras.activations.sigmoid(last)
+        
+        super().__init__(inputs=[x, y], outputs=last, name=name)  
+
+class pix2pix_gen(ne.modelio.LoadableModel):
+    """
+    """
+    @ne.modelio.store_config_args
+    def __init__(self,
+                 volshape,
+                 nb_enc_features=[16,32,64,128],
+                 nb_dec_features=[128,64,32,16,1],
+                 final_activation = None, 
+                 name='pix2pix_gen'):
+        
+        img_in = tf.keras.Input(shape=(*volshape, 1), name='%s_img_input' % name)
+        unet = voxelmorph.networks.Unet(inshape=[*volshape,1],
+                                        nb_features=[nb_enc_features,nb_dec_features],
+                                        final_activation_function=final_activation)
+        img_out = unet(img_in)
+        
+        super().__init__(inputs=img_in, outputs=img_out, name=name)
+
+def gan(generator, discriminator, image_shape):
+
+    for layer in discriminator.layers:
+        if not isinstance(layer, KL.BatchNormalization):
+            layer.trainable = False
+
+    in_src = KL.Input(shape=(*image_shape, 1))
+    gen_out = generator(in_src)
+    dis_out = discriminator([in_src, gen_out])
+    model = tf.keras.Model(in_src, [dis_out, gen_out])
+    
+    return model

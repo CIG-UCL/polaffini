@@ -164,7 +164,7 @@ tf.keras.utils.plot_model(model, to_file=args.model[:-3] + '_plot.png', show_sha
 #%% Train the model
 
 steps_per_epoch = n_train // args.batch_size
-if args.val_data is None:   
+if not is_val:   
     val_steps = None
     monitor='loss'
 else:
@@ -190,7 +190,7 @@ hist = model.fit(gen_train,
                  callbacks=[save_callback, csv_logger], # plot_reg],
                  verbose=2)
 
-dwarp.utils.plot_losses(args.model[:-3] + '_losses.csv', is_val=args.val_data is not None)
+dwarp.utils.plot_losses(args.model[:-3] + '_losses.csv', is_val=is_val)
 
 
 

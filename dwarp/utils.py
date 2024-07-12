@@ -22,7 +22,7 @@ def print_inputGT(sample):
     print('Generator:')
     inputGT = ['Inputs', 'Ground truths']
     for j in range(len(sample)):
-        if j <= 2:
+        if j < 2:
             print('  - ' + inputGT[j] + ':')
         else:
             print('Other:')
