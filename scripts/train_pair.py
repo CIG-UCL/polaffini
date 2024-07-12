@@ -7,8 +7,8 @@ import tensorflow as tf
 import voxelmorph           
 import dwarp
 import argparse
-import generators
-import utils
+import dwarp.generators as generators
+import dwarp.utils as utils
 import numpy
 import random
 
