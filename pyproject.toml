@@ -29,7 +29,8 @@ dwarp = [
       "neurite==0.2",
       "pandas==2.0.3",
       "tensorflow[and-cuda]==2.15.1",
-      "voxelmorph==0.2"
+      "voxelmorph==0.2",
+      "pydot==2.0.0"
 ]
 
 [tool.setuptools]
