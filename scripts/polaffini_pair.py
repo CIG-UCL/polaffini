@@ -25,6 +25,7 @@ def polaffini_pair():
     # polaffini parameters
     parser.add_argument('-transfo', '--transfos-type', type=str, required=False, default='affine', help="Type of the local tranformations ('affine' or 'rigid'). Default: 'affine'.")
     parser.add_argument('-sigma', '--sigma', type=float, required=False, default=15, help='Standard deviation (in mm) for the Gaussian kernel. The higher the sigma, the smoother the output transformation. Use inf for affine transformation. Default: 15.')
+    parser.add_argument('-alpha', '--alpha', type=float, required=False, default=1, help='Position of the overall transformation on the diffeomorphic path from identity to the transfo from moving to reference (e.g. use 0.5 for half-way registration). Default: 1.')
     parser.add_argument('-wbg', '--weight-bg', type=float, required=False, default=1e-5, help='Weight of the global background transformation for stability. Default: 1e-5.')
     parser.add_argument('-downf', '--down-factor', type=float, required=False, default=4, help='Downsampling factor of the transformation. Default: 4.')
     parser.add_argument('-dist', '--dist', type=str, required=False, default='center', help="Distance used for the weight maps. 'center': distance to neighborhood center, or 'maurer': distance to label. Default: 'center'.")
@@ -45,14 +46,15 @@ def polaffini_pair():
     ref_seg = utils.imageIO(args.ref_seg).read()
 
     init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=mov_seg,
-                                                    ref_seg=ref_seg,
-                                                    sigma=args.sigma,
-                                                    weight_bg=args.weight_bg,
-                                                    transfos_type=args.transfos_type,
-                                                    down_factor=args.down_factor,
-                                                    dist=args.dist,
-                                                    omit_labs=args.omit_labs,
-                                                    bg_transfo=args.bg_transfo)
+                                                      ref_seg=ref_seg,
+                                                      sigma=args.sigma,
+                                                      alpha=args.alpha,
+                                                      weight_bg=args.weight_bg,
+                                                      transfos_type=args.transfos_type,
+                                                      down_factor=args.down_factor,
+                                                      dist=args.dist,
+                                                      omit_labs=args.omit_labs,
+                                                      bg_transfo=args.bg_transfo)
     transfo = polaffini.get_full_transfo(init_aff, polyAff_svf)
 
     resampler = sitk.ResampleImageFilter()
