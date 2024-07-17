@@ -15,6 +15,9 @@ def polaffini_pair():
     parser.add_argument('-rs', '--ref-seg', type=str, required=True, help="Path to the reference segmentation, can be 'mni1' or 'mni2'")
     parser.add_argument('-m', '--mov-img', type=str, required=False, default=None, help='Path to the moving image.')
     parser.add_argument('-ma', '--mov-aux', type=str, required=False, default=None, help='Path to the moving auxiliary image.')
+    parser.add_argument('-g', '--geom', type=str, required=False, default=None, help='Path to geometry image for resampling.')
+    parser.add_argument('-r', '--ref-img', type=str, required=False, default=None, help='Path to the reference image (for kissing).')
+    parser.add_argument('-ra', '--ref-aux', type=str, required=False, default=None, help='Path to the reference auxiliary image (for kissing).')
     # outputs
     parser.add_argument('-oi', '--out-img', type=str, required=False, default=None, help='Path to output image.')
     parser.add_argument('-os', '--out-seg', type=str, required=False, default=None, help='Path to output moved segmentation.')
@@ -22,6 +25,7 @@ def polaffini_pair():
     parser.add_argument('-ot', '--out-transfo', type=str, required=False, default=None, help='Path to output full transformations in diffeo form.')
     parser.add_argument('-ota', '--out-aff-transfo', type=str, required=False, default=None, help='Path to output affine part of transformation (.txt)')
     parser.add_argument('-otp', '--out-poly-transfo', type=str, required=False, default=None, help='Path to output polyaffine part of the transformation in SVF form.')
+    parser.add_argument('-k', '--kissing', type=int, required=False, default=0, help='Kissing mapping: meets at location alpha on the diffeomorphic path.')
     # polaffini parameters
     parser.add_argument('-transfo', '--transfos-type', type=str, required=False, default='affine', help="Type of the local tranformations ('affine' or 'rigid'). Default: 'affine'.")
     parser.add_argument('-sigma', '--sigma', type=float, required=False, default=15, help='Standard deviation (in mm) for the Gaussian kernel. The higher the sigma, the smoother the output transformation. Use inf for affine transformation. Default: 15.')
@@ -31,7 +35,9 @@ def polaffini_pair():
     parser.add_argument('-dist', '--dist', type=str, required=False, default='center', help="Distance used for the weight maps. 'center': distance to neighborhood center, or 'maurer': distance to label. Default: 'center'.")
     parser.add_argument('-omit_labs','--omit-labs', type=int, nargs='+', required=False, default=[], help='List of labels to omit. Default: []. 0 (background) is always omitted.')
     parser.add_argument('-bg_transfo','--bg-transfo', type=int, required=False, default=1, help='Compute an affine background transformation. (1:yes, 0:no). Default: 1.')
-
+    # other
+    parser.add_argument('-do_bch','--do-bch', type=int, required=False, default=0, help='Use the BCH formula to compute the overall field. (1:yes, 0:no). Default: 0.')
+    
     args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 
     #%% Main
@@ -40,27 +46,62 @@ def polaffini_pair():
         args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt_2mm.nii.gz')
     elif args.ref_seg == "mni1":
         args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt.nii.gz')
-
-
+        
     mov_seg = utils.imageIO(args.mov_seg).read()
     ref_seg = utils.imageIO(args.ref_seg).read()
+    if args.geom is not None:
+        geom = utils.imageIO(args.geom).read()
+        
+    if args.do_bch:
+        init_aff, polyAff_svf, polyAff_svf_jac = polaffini.estimateTransfo(mov_seg=mov_seg,
+                                                                           ref_seg=ref_seg,
+                                                                           sigma=args.sigma,
+                                                                           alpha=1,
+                                                                           weight_bg=args.weight_bg,
+                                                                           transfos_type=args.transfos_type,
+                                                                           down_factor=args.down_factor,
+                                                                           dist=args.dist,
+                                                                           omit_labs=args.omit_labs,
+                                                                           bg_transfo=args.bg_transfo,
+                                                                           out_jac=True)
+        full_svf = polaffini.get_full_svf(init_aff, polyAff_svf, polyAff_svf_jac)
+        transfo = polaffini.integrate_svf_lowMem(full_svf, alpha=args.alpha)
+        if args.kissing:
+            transfo_rev = polaffini.integrate_svf_lowMem(full_svf, alpha=args.alpha-1)
+            
+    else:
+        init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=mov_seg,
+                                                          ref_seg=ref_seg,
+                                                          sigma=args.sigma,
+                                                          alpha=args.alpha,
+                                                          weight_bg=args.weight_bg,
+                                                          transfos_type=args.transfos_type,
+                                                          down_factor=args.down_factor,
+                                                          dist=args.dist,
+                                                          omit_labs=args.omit_labs,
+                                                          bg_transfo=args.bg_transfo)
+        transfo = polaffini.get_full_transfo(init_aff, polyAff_svf)
+    
+        if args.kissing:
+             init_aff_rev, polyAff_svf_rev = polaffini.estimateTransfo(mov_seg=ref_seg,
+                                                                       ref_seg=mov_seg,
+                                                                       sigma=args.sigma,
+                                                                       alpha=1-args.alpha,
+                                                                       weight_bg=args.weight_bg,
+                                                                       transfos_type=args.transfos_type,
+                                                                       down_factor=args.down_factor,
+                                                                       dist=args.dist,
+                                                                       omit_labs=args.omit_labs,
+                                                                       bg_transfo=args.bg_transfo)
+             transfo_rev = polaffini.get_full_transfo(init_aff_rev, polyAff_svf_rev)
 
-    init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=mov_seg,
-                                                      ref_seg=ref_seg,
-                                                      sigma=args.sigma,
-                                                      alpha=args.alpha,
-                                                      weight_bg=args.weight_bg,
-                                                      transfos_type=args.transfos_type,
-                                                      down_factor=args.down_factor,
-                                                      dist=args.dist,
-                                                      omit_labs=args.omit_labs,
-                                                      bg_transfo=args.bg_transfo)
-    transfo = polaffini.get_full_transfo(init_aff, polyAff_svf)
-
+     
     resampler = sitk.ResampleImageFilter()
-    resampler.SetReferenceImage(ref_seg)
+    if args.geom is None:
+        geom = ref_seg
+    resampler.SetReferenceImage(geom)
     resampler.SetTransform(transfo)
-
+     
     if args.out_img is not None:
         if args.mov_img is None:
             sys.exit('Need a moving image.')
@@ -68,7 +109,7 @@ def polaffini_pair():
         resampler.SetInterpolator(sitk.sitkLinear)
         mov_img = resampler.Execute(mov_img)
         utils.imageIO(args.out_img).write(mov_img)
-
+     
     if args.out_aux is not None:
         if args.mov_aux is None:
             sys.exit('Need an auxiliary moving image.')
@@ -76,22 +117,50 @@ def polaffini_pair():
         resampler.SetInterpolator(sitk.sitkLinear)
         mov_aux = resampler.Execute(mov_aux)
         utils.imageIO(args.out_aux).write(mov_aux)
-        
     if args.out_seg is not None:
         resampler.SetInterpolator(sitk.sitkNearestNeighbor)
         mov_seg = resampler.Execute(mov_seg)
         utils.imageIO(args.out_seg).write(mov_seg)
-
+    
     if args.out_aff_transfo is not None:
         sitk.WriteTransform(init_aff, args.out_aff_transfo)
-
+    
     if args.out_poly_transfo is not None:
         utils.imageIO(args.out_poly_transfo).write(polyAff_svf)
-
+    
     if args.out_transfo is not None:
         tr2disp = sitk.TransformToDisplacementFieldFilter()
         tr2disp.SetReferenceImage(polyAff_svf)
         utils.imageIO(args.out_transfo).write(tr2disp.Execute(transfo))
+   
+    if args.kissing:
+        if args.geom is None:
+            geom = mov_seg
+        resampler.SetReferenceImage(geom)
+        resampler.SetTransform(transfo_rev)
+    
+        if args.out_img is not None:
+            if args.ref_img is None:
+                sys.exit('Need a reference image.')
+            ref_img = utils.imageIO(args.ref_img).read()
+            resampler.SetInterpolator(sitk.sitkLinear)
+            ref_img = resampler.Execute(ref_img)
+            filename, ext = utils.imageIO(args.out_img)._splitext()
+            utils.imageIO(filename + '_rev' + ext).write(ref_img)
+    
+        if args.out_aux is not None:
+            if args.ref_aux is None:
+                sys.exit('Need an auxiliary reference image.')
+            ref_aux = utils.imageIO(args.ref_aux).read()
+            resampler.SetInterpolator(sitk.sitkLinear)
+            ref_aux = resampler.Execute(ref_aux)
+            filename, ext = utils.imageIO(args.out_aux)._splitext()
+            utils.imageIO(filename + '_rev' + ext).write(ref_aux)
+        if args.out_seg is not None:
+            resampler.SetInterpolator(sitk.sitkNearestNeighbor)
+            ref_seg = resampler.Execute(ref_seg)
+            filename, ext = utils.imageIO(args.out_seg)._splitext()
+            utils.imageIO(filename + '_rev' + ext).write(ref_seg)  
 
 
 if __name__ == "__main__":

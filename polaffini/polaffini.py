@@ -80,13 +80,16 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
         aff_init.SetMatrix((transfo_aff_mov[0:ndims, 0:ndims]).ravel())
         aff_init.SetTranslation(transfo_aff_mov[0:ndims, ndims])        
         mov_pts = np.transpose(np.matmul(transfo_aff_mov_inv[0:ndims, 0:ndims], np.transpose(mov_pts))
-                               + np.reshape(transfo_aff_mov_inv[0:ndims, ndims], (ndims,1))) 
+                                + np.reshape(transfo_aff_mov_inv[0:ndims, ndims], (ndims,1))) 
         ref_pts = np.transpose(np.matmul(transfo_aff_ref[0:ndims, 0:ndims], np.transpose(ref_pts))
-                               + np.reshape(transfo_aff_ref[0:ndims, ndims], (ndims,1)))    
+                                + np.reshape(transfo_aff_ref[0:ndims, ndims], (ndims,1)))    
+        
     if sigma != float('inf'):
         
         weight_map_sum = sitk.Image(ref_seg_down.GetSize(), sitk.sitkFloat64)
         weight_map_sum.CopyInformation(ref_seg_down) 
+        
+        polyAff_svf_jac = None
         if out_jac:
             polyAff_svf_jac = sitk.GetImageFromArray(np.zeros(ref_seg_down.GetSize()[::-1] + (ndims**2,)), isVector=True)
             polyAff_svf_jac.CopyInformation(ref_seg_down)
@@ -167,7 +170,6 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
         return aff_init, polyAff_svf
 
 
-
 #%% Utils
 
 def integrate_svf(svf, int_steps=7):
@@ -191,10 +193,14 @@ def integrate_svf(svf, int_steps=7):
     return compo_transfo
 
 
-def integrate_svf_lowMem(svf, int_steps=7, out_tr=True):
+def integrate_svf_lowMem(svf, int_steps=7, out_tr=True, alpha=1):
     
     ndims = svf.GetDimension()
-
+    
+    if alpha != 1:
+        print(alpha)
+        svf = sitk.Compose([sitk.VectorIndexSelectionCast(svf, d) * alpha for d in range(ndims)])
+        
     # scaling
     svf = sitk.Compose([sitk.VectorIndexSelectionCast(svf, d)/(2**int_steps) for d in range(ndims)])
 
@@ -214,15 +220,33 @@ def integrate_svf_lowMem(svf, int_steps=7, out_tr=True):
     else:
         return svf
 
+
+def scale_aff_transfo(aff_transfo, alpha):
     
-def get_full_transfo(aff_init, polyAff_svf, invert=False):
+    ndims = aff_transfo.GetDimension()
     
+    aff_mat = np.reshape(aff_transfo.GetParameters()[:-ndims], (ndims,ndims))
+    aff_mat = np.c_[aff_mat, aff_transfo.GetParameters()[ndims**2:]]
+    aff_mat = np.r_[aff_mat, np.reshape([0]*ndims+[1], (1,ndims+1))]
+    
+    aff_mat_scaled = expm(alpha*logm(aff_mat))
+    aff_transfo_scaled = sitk.AffineTransform(ndims)
+    aff_transfo_scaled.SetMatrix(np.ravel(aff_mat_scaled[:ndims,:ndims]))
+    aff_transfo_scaled.SetTranslation(aff_mat_scaled[:ndims,ndims])
+    
+    return aff_transfo_scaled
+
+    
+def get_full_transfo(aff_init, polyAff_svf, invert=False, alpha=1):
+    ndims = aff_init.GetDimension()
+    if alpha != 1:
+        aff_init = scale_aff_transfo(aff_init, alpha)
+        polyAff_svf = sitk.Compose([alpha * sitk.VectorIndexSelectionCast(polyAff_svf, d) for d in range(ndims)])
     if polyAff_svf is None:
         if invert:
             transfo_full = aff_init.GetInverse()
         else:
             transfo_full = aff_init
-            
     else:
         if invert:
             polyAff = integrate_svf_lowMem(-polyAff_svf)
@@ -232,8 +256,7 @@ def get_full_transfo(aff_init, polyAff_svf, invert=False):
             polyAff = integrate_svf_lowMem(polyAff_svf)
             transfo_full = sitk.CompositeTransform(aff_init)
             transfo_full.AddTransform(polyAff)
-    
-    return transfo_full   
+    return transfo_full
 
 
 def write_dispField(transfo, out_file, ref_image=None):
@@ -340,6 +363,7 @@ def opti_linear_transfo_between_point_sets(ref_pts, mov_pts,
     return loc_mat
 
 
+    
 def get_full_svf(aff_init, polyAff_svf, polyAff_svf_jac=None, bch_order=2):
     
     ndims = polyAff_svf.GetDimension()
@@ -363,10 +387,7 @@ def get_full_svf(aff_init, polyAff_svf, polyAff_svf_jac=None, bch_order=2):
     polyAff_svf = sitk.GetArrayFromImage(polyAff_svf)
     polyAff_svf = polyAff_svf.reshape(volshape + (ndims,1))
 
-    full_svf = aff_svf
-    if bch_order > 0:
-        full_svf += polyAff_svf
-    # full_svf = aff_svf  + polyAff_svf   # BCH formula order 1
+    full_svf = aff_svf  + polyAff_svf   # BCH formula order 1
     
     if bch_order > 1: 
         aff_svf_jac = np.ones(volshape + (ndims, ndims))

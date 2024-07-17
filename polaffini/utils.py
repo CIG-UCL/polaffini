@@ -56,7 +56,7 @@ class imageIO:
     def _splitext(self):     
         filename, ext = os.path.splitext(self.filename)
         if ext == '.gz':
-            filename, ext = os.path.splitext(self.filename)
+            filename, ext = os.path.splitext(filename)
             ext = ext + '.gz'       
         return filename, ext
     
