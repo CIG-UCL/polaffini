@@ -139,7 +139,7 @@ def mov2atlas_initialized(mov_files,
     """
     Generator for moving images and a single reference. 
     Moving images are assumed to have already undergone affine or 
-    polaffini initialization (typically using apply_polaffini). 
+    polaffini initialization (typically using polaffini_set2template.py). 
     Therefore the moving and target images are already resampled in the same grid. 
     Segmentations are supposed to be one-hot encoded.
     
@@ -177,7 +177,7 @@ def mov2atlas_initialized(mov_files,
         if is_seg:
             ref_seg = sitk.ReadImage(ref_seg_file)
 
-        inshape = ref.GetSize()
+        inshape = ref.GetSize()[::-1]
         ndims = ref.GetDimension()
         ref = sitk.GetArrayFromImage(ref)[np.newaxis,..., np.newaxis]
         ref = np.concatenate([ref]*batch_size, axis=0)
