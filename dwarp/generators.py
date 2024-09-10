@@ -121,7 +121,7 @@ def mov2atlas_res(mov_files,
             inputs += [mov_segs]
             groundTruths += [ref_seg]
             
-        field0 = np.zeros((batch_size, *inshape, ndims))
+        field0 = np.zeros((*mov_imgs.shape[:-1], ndims))
         groundTruths += [field0]
         
         yield (inputs, groundTruths)
@@ -138,9 +138,8 @@ def mov2atlas_initialized(mov_files,
     """
     Generator for moving images and a single reference. 
     Moving images are assumed to have already undergone affine or 
-    polaffini initialization (typically using apply_polaffini). 
+    polaffini initialization (typically using polaffini_set2template.py). 
     Therefore the moving and target images are already resampled in the same grid. 
-    Segmentations are supposed to be one-hot encoded.
     
     Parameters
     ----------
@@ -149,11 +148,13 @@ def mov2atlas_initialized(mov_files,
     ref_file : string.
         Path to single target image. 
     mov_seg-files : list, optional.
-        Path to moving segmentations (in one-hot encoding).
+        Path to moving segmentations.
     ref_seg_file : string, optional.
-        Path to target segmentation (in one-hot encoding).
+        Path to target segmentation.
     weight_file : string, optional.
         Path to weight map associated to target atlas. Default: None.
+    one_hot : bool, optional.
+        Switch indicating if the segemntations are encoded in one-hot or not. Default: True.
     batch_size : int, optional.
         Batch size. Default: 1.
 
@@ -177,7 +178,6 @@ def mov2atlas_initialized(mov_files,
         if is_seg:
             ref_seg = sitk.ReadImage(ref_seg_file)
 
-        inshape = ref.GetSize()
         ndims = ref.GetDimension()
         ref = sitk.GetArrayFromImage(ref)[np.newaxis,..., np.newaxis]
         ref = ref.astype(dtype)
@@ -230,7 +230,10 @@ def mov2atlas_initialized(mov_files,
             inputs += [mov_segs]
             groundTruths += [ref_seg]
             
-        field0 = np.zeros((batch_size, *inshape, ndims), dtype)
+<<<<<<< HEAD
+=======
+        field0 = np.zeros((*mov_imgs.shape[:-1], ndims), np.float32)    
+>>>>>>> b599f4900bb28e478edd79cfc9ccacd3089059fc
         groundTruths += [field0]
         
         yield (inputs, groundTruths)
@@ -250,11 +253,8 @@ def pair_polaffini(mov_files,
                    polaffini_omit_labs=[2,23,41],      
                    batch_size=1):
     """
-    Generator for moving images and a single reference. 
-    Moving images are assumed to have already undergone affine or 
-    polaffini initialization (typically using apply_polaffini). 
-    Therefore the moving and target images are already resampled in the same grid. 
-    Segmentations are supposed to be one-hot encoded.
+    Generator for a pair of moving images. 
+    Paired POLAFFINI is included.
     
     Parameters
     ----------
@@ -299,15 +299,13 @@ def pair_polaffini(mov_files,
     nlabs = len(labels)
 
     while True:
-                    
-        ind_batch_ref = np.random.choice(range(0, len(mov_files)), size=batch_size, replace=False)
-        ind_batch_mov = np.random.choice(range(0, len(mov_files)), size=batch_size, replace=False)
-        
+                       
         ref_imgs = [] 
         ref_segs = []
         mov_imgs = [] 
         mov_segs = []
-        for i, j in zip(ind_batch_ref, ind_batch_mov): 
+        for _ in range(batch_size): 
+            i, j = np.random.choice(range(len(mov_files)), size=2, replace=False)
             # print(mov_files[i])
             # print(mov_files[j])
             ref_img = sitk.ReadImage(mov_files[i])
@@ -354,7 +352,7 @@ def pair_polaffini(mov_files,
             resampler.SetInterpolator(sitk.sitkNearestNeighbor)
             mov_seg = resampler.Execute(mov_seg)
 
-            ref_img =  sitk.GetArrayFromImage(ref_img)[..., np.newaxis]  
+            ref_img = sitk.GetArrayFromImage(ref_img)[..., np.newaxis]  
             mov_img = sitk.GetArrayFromImage(mov_img)[..., np.newaxis]
             if sdf or one_hot:
                 ref_seg = [ref_seg==l for l in labels]
