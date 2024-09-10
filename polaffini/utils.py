@@ -8,8 +8,7 @@ import copy
 
 
 class imageIO:
-    # SimpleITK is preferred to nibabel as the former has shown to be more reliable for orientation matrices.
-    # Although, conversion with nibabel is proposed for formats not supported by SimpleITK.
+    # SimpleITK is preferred to nibabel but the latter is used for freesurfer formats.
     
     def __init__(self, filename, convertvia='nii', tmpdir=None):
         self.convertvia = convertvia
@@ -111,22 +110,28 @@ def one_hot_enc(seg, labs, segtype='itkimg', dtype=np.int8):
     return seg
 
 
-def get_matOrientation(img, decomp=False):
-    
+def get_matOrientation(img, indexing='itk'):
+    # CAREFUL: 
+    # It's from itk indices to physical space by default.
+    # For numpy indices to physical space, use indexing='numpy'.
+
     ndims = img.GetDimension() 
     origin = img.GetOrigin()
     spacing = img.GetSpacing()
     direction = img.GetDirection()
     
-    if decomp:
-        return (origin, spacing, direction)
+    perm = np.eye(ndims+1)
+    if indexing == 'numpy':
+        perm[:ndims,:ndims] = np.eye(ndims)[::-1]
     
-    else:
-        matO = np.matmul(np.reshape(direction,(ndims, ndims)), np.diag(spacing))
-        matO = np.concatenate((matO, np.reshape(origin, (ndims,1))), axis=1)
-        matO = np.concatenate((matO, np.reshape([0]*ndims+[1], (1,ndims+1))), axis=0)
-        return matO
+    matO = np.matmul(np.reshape(direction,(ndims, ndims)), np.diag(spacing))
+    matO = np.concatenate((matO, np.reshape(origin, (ndims,1))), axis=1)
+    matO = np.concatenate((matO, np.reshape([0]*ndims+[1], (1,ndims+1))), axis=0)
+    matO = np.matmul(matO, perm)
+
+    return matO
   
+
     
 def decomp_matOrientation(matO):
     """

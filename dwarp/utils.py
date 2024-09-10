@@ -1,8 +1,10 @@
+import os
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import SimpleITK as sitk
 import pandas as pd
+import neurite as ne
 
 def develop(x, dec='|_'):
     
@@ -49,7 +51,7 @@ def shift_to_transfo(loc_shift, indexing='ij'):
     return mesh + loc_shift
 
 
-def plot_losses(loss_file, is_val=False):
+def plot_losses(loss_file, is_val=False, write=True):
 
     tab_loss = pd.read_csv(loss_file, sep=',')
     nb_losses = len(tab_loss.columns) - 1
@@ -57,11 +59,12 @@ def plot_losses(loss_file, is_val=False):
         nb_losses = int(nb_losses / 2)
     
     f, axs = plt.subplots(1, nb_losses, figsize=(20,5))
+    if nb_losses == 1: axs = [axs]
     f.dpi = 200
     plt.rcParams['font.size'] = '3'
     plt.rcParams["xtick.major.size"] = 2
     plt.rcParams["ytick.major.size"] = 2
-    
+     
     for l in range(nb_losses):
         axs[l].plot(tab_loss.epoch, tab_loss.loc[:,tab_loss.columns[l+1]], linewidth=0.5, label="training")
         if is_val:
@@ -70,7 +73,9 @@ def plot_losses(loss_file, is_val=False):
         axs[l].legend(prop={'size': 10})
     
     plt.tight_layout()
-    plt.savefig("./losses.png")
+    if write:
+        filename, _ = os.path.splitext(loss_file)
+        plt.savefig(filename + '.png')
 
 
 
@@ -99,14 +104,16 @@ def jacobian(transfo, outDet=False, dire=None, is_shift=False):
     
     if is_shift:
         if dire is None:
-            jacob += tf.eye(ndims, ndims, transfo.shape[:-1])
+            jacob += tf.eye(ndims, ndims, tf.shape(transfo)[:-1])
         else:
-            identity = [tf.ones(transfo.shape[:-1]) if d==dire else tf.zeros(transfo.shape[:-1]) for d in range(ndims)]
+            identity = [tf.ones(tf.shape(transfo)[:-1]) if d==dire else tf.zeros(tf.shape(transfo)[:-1]) for d in range(ndims)]
             jacob += tf.expand_dims(tf.stack(identity, axis=-1), axis=-2)
-
+        
     if outDet:
         # detjac = tf.linalg.det(jacob)
-        if ndims == 2:
+        if ndims == 1:
+            detjac = jacob[:,:,0,0]
+        elif ndims == 2:
             if ndirs == 2:
                 detjac =  jacob[:,:,:,0,0] * jacob[:,:,:,1,1]\
                         - jacob[:,:,:,1,0] * jacob[:,:,:,0,1] 
@@ -263,4 +270,60 @@ def grid_img(volshape, omitdim=[2], spacing=5):
         if 2 not in omitdim:
             g[:,:,k] = 1 
     return g
+
+
+def quadratic_unidir_to_dense_shift(matrix, dire, shape, shift_center=True, indexing='ij'):
+    """
+    Transforms an affine matrix to a dense location shift.
+
+    Algorithm:
+        1. Build and (optionally) shift grid to center of image.
+        2. Apply affine matrix to each index.
+        3. Subtract grid.
+
+    Parameters:
+        matrix: quadratic matrix of shape (N, N).
+        shape: ND shape of the target warp.
+        shift_center: Shift grid to image center.
+        indexing: Must be 'xy' or 'ij'.
+
+    Returns:
+        Dense shift (warp) of shape (*shape, N).
+    """
+
+    if isinstance(shape, (tf.compat.v1.Dimension, tf.TensorShape)):
+        shape = shape.as_list()
+
+    if not tf.is_tensor(matrix) or not matrix.dtype.is_floating:
+        matrix = tf.cast(matrix, tf.float32)
+
+    # check input shapes
+    ndims = len(shape)
+    if matrix.shape[-1] != ndims or matrix.shape[-2] != ndims:
+        raise ValueError(f'Quadratic matrix must be squared batch_size x ndims x ndims (ndims={ndims}D).')
+
+    # list of volume ndgrid
+    # N-long list, each entry of shape
+    mesh = ne.utils.volshape_to_meshgrid(shape, indexing=indexing)
+    mesh = [f if f.dtype == matrix.dtype else tf.cast(f, matrix.dtype) for f in mesh]
+
+    if shift_center:
+        mesh = [mesh[f] - (shape[f] - 1) / 2 for f in range(len(shape))]
+
+    # transform into a large matrix
+    flat_mesh = [ne.utils.flatten(f) for f in mesh]
+    mesh_matrix = tf.transpose(tf.stack(flat_mesh, axis=1))  # ndims x nb_voxels
+
+    # compute locations
+    loc_matrix = tf.matmul(matrix, mesh_matrix)              # ndims x nb_voxels
+    loc_matrix = loc_matrix * mesh_matrix                    # ndims x nb_voxels
+    loc_matrix = tf.math.reduce_sum(loc_matrix, axis=0)      # nb_voxels
+    loc = tf.reshape(loc_matrix, list(shape))                # *shape x 1
+
+    # get shifts and return
+    loc = [loc if d==dire else tf.zeros_like(loc) for d in range(ndims)]
+    loc = tf.stack(loc, axis=-1)                             # *shape x ndims
+    
+    return loc
+
    

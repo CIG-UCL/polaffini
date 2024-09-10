@@ -52,9 +52,7 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
     sigma = float(sigma)
     
     ref_seg = sitk.Cast(ref_seg, sitk.sitkInt64)
-    
     ndims = ref_seg.GetDimension()
-
     mov_seg = sitk.Cast(mov_seg, sitk.sitkInt64)
     
     labs, _, _ = get_common_labels(ref_seg, mov_seg, omit_labs=omit_labs)
