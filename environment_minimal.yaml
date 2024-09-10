@@ -1,0 +1,8 @@
+channels:
+  - defaults
+  - nodefaults
+dependencies:
+  - pip=24.2
+  - python=3.10
+  - pip:
+      - "polaffini[dwarp] @ git+https://github.com/CIG-UCL/polaffini.git"
