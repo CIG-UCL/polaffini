@@ -219,4 +219,4 @@ for i in range(len(mov_img_names)):
             svf.SetOrigin(origin)
             utils.imageIO(out_path).write(svf)
 
-print('boom\n')
+print('\nboom\n')

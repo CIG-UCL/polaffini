@@ -65,13 +65,13 @@ This tutorial requires an MR dataset containing homologous data of 2 types:
 ## B.1. Using a pre-trained model
 :warning: `diffeo2mni.h5` is not ready yet. Pre-trained models will be added soon.
 ```bash
-python <path-to-dwarp_public>/register.py -M <path-to-dwarp-public-directory>/diffeo2mni.h5\
-                                          -m <path-to-moving-image>\
-                                          -ms <path-to-moving-segmentation>\
-                                          -oi <path-to-moved-image>\
-                                          -os <path-to-moved-segmentation>\
-                                          -g mni1\
-                                          -polaffini 1 -omit_labs 2 41 -downf 2
+python <path-to-dwarp_public>/register_diffeo_toTemplate.py -M <path-to-dwarp-public-directory>/diffeo2mni.h5\
+                                                            -m <path-to-moving-image>\
+                                                            -ms <path-to-moving-segmentation>\
+                                                            -oi <path-to-moved-image>\
+                                                            -os <path-to-moved-segmentation>\
+                                                            -g mni1\
+                                                            -polaffini 1 -omit_labs 2 41 -downf 2
 ```
                                            
 Use `-h` to show more options and display help.\
@@ -125,11 +125,11 @@ The output directories will be organized as follow:\
 
 ### B.2.b. Model training ###
 ```
-python <path-to-dwarp_public>/scripts/train.py -o <path-to-output-directory>/model.h5\
-                                               -e 1000\
-                                               -t <path-to-output-directory>/train\
-                                               -v <path-to-output-directory>/val\
-                                               -s 1 -l nlcc -ls dice
+python <path-to-dwarp_public>/scripts/train_diffeo_toTemplate -o <path-to-output-directory>/model.h5\
+                                                              -e 1000\
+                                                              -t <path-to-output-directory>/train\
+                                                              -v <path-to-output-directory>/val\
+                                                              -s 1 -l nlcc -ls dice
 ```
 Use `-h` to show more options and display help.\
 `-s 1` indicates that segmentations are leveraged during the training.\

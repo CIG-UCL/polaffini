@@ -126,8 +126,6 @@ def mov2atlas_res(mov_files,
         
         yield (inputs, groundTruths)
         
-        
-        
 
 def mov2atlas_initialized(mov_files, 
                           ref_file,
@@ -135,6 +133,7 @@ def mov2atlas_initialized(mov_files,
                           ref_seg_file=None,
                           weight_file=None,
                           one_hot=True,
+                          dtype=np.float32,
                           batch_size=1):
     """
     Generator for moving images and a single reference. 
@@ -168,6 +167,7 @@ def mov2atlas_initialized(mov_files,
         Batch of repeated reference segmentation. (optional).
     """
     
+    print(dtype)
     is_weight = weight_file is not None
     is_seg = (mov_seg_files is not None) and (ref_seg_file is not None)
     
@@ -180,6 +180,7 @@ def mov2atlas_initialized(mov_files,
         inshape = ref.GetSize()
         ndims = ref.GetDimension()
         ref = sitk.GetArrayFromImage(ref)[np.newaxis,..., np.newaxis]
+        ref = ref.astype(dtype)
         ref = np.concatenate([ref]*batch_size, axis=0)
         
         if is_weight:
@@ -192,7 +193,8 @@ def mov2atlas_initialized(mov_files,
         mov_segs = []
         for i in ind_batch:    
             mov_img = sitk.ReadImage(mov_files[i])
-            mov_img = sitk.GetArrayFromImage(mov_img)[np.newaxis,..., np.newaxis]           
+            mov_img = sitk.GetArrayFromImage(mov_img)[np.newaxis,..., np.newaxis]  
+            mov_img = mov_img.astype(dtype)
             mov_imgs += [mov_img]         
             if is_seg:
                 mov_seg = sitk.ReadImage(mov_seg_files[i])
@@ -201,7 +203,7 @@ def mov2atlas_initialized(mov_files,
                     mov_seg = np.transpose(mov_seg,[*range(1,ndims+1)]+[0])[np.newaxis,...]
                 else:
                     mov_seg = mov_seg[np.newaxis,..., np.newaxis]   
-                mov_seg = mov_seg.astype(np.float32)
+                mov_seg = mov_seg.astype(dtype)
                 mov_segs += [mov_seg] 
 
         mov_imgs = np.concatenate(mov_imgs, axis=0)
@@ -214,7 +216,7 @@ def mov2atlas_initialized(mov_files,
                 ref_seg = np.transpose(ref_seg,[*range(1,ndims+1)]+[0])[np.newaxis,...]
             else:
                 ref_seg = ref_seg[np.newaxis,..., np.newaxis]
-            ref_seg = ref_seg.astype(np.float32)
+            ref_seg = ref_seg.astype(dtype)
             ref_seg = np.concatenate([ref_seg]*batch_size, axis=0)
          
         inputs = [mov_imgs]
@@ -228,7 +230,7 @@ def mov2atlas_initialized(mov_files,
             inputs += [mov_segs]
             groundTruths += [ref_seg]
             
-        field0 = np.zeros((batch_size, *inshape, ndims), np.float32)
+        field0 = np.zeros((batch_size, *inshape, ndims), dtype)
         groundTruths += [field0]
         
         yield (inputs, groundTruths)
@@ -388,131 +390,6 @@ def pair_polaffini(mov_files,
         groundTruths = [ref_imgs, mov_imgs, ref_segs, mov_segs, field0]
         
         yield (inputs, groundTruths)
-        
-
-def DWtoDWmean(subdirs,
-               k = 4,
-               ped = None,
-               bval = None,
-               dw_file = None,
-               b0_file = None,
-               target_bval = 'same',
-               sl_axi = None,
-               get_dwmean = False,
-               spat_aug_prob=0,
-               int_pair_aug_prob=0,
-               aug_dire = None,
-               batch_size=1):
-    # sub
-    #   |_ PED
-    #        |_ bval
-    
-    while True:
-        b0s = []
-        dws = []
-        dws_mean = []
-        
-        for b in range(batch_size):
-            # random subject
-            i = np.random.choice(range(0, len(subdirs)))
-            sub_i = subdirs[i]
-    
-            # random PED
-            if ped is None:
-                list_ped = sorted(next(os.walk(sub_i))[1])
-                ind_ped = np.random.choice(range(0, len(list_ped)))
-                ped_i = list_ped[ind_ped]
-            else:
-                ped_i = ped
-            
-            # random bval
-            if bval is None:
-                list_bval = sorted(next(os.walk(os.path.join(sub_i, ped_i)))[1])
-                ind_bval = np.random.choice(range(1, len(list_bval)))
-                bval_i = list_bval[ind_bval]
-            else: 
-                bval_i = 'b' + str(bval)
-       
-            # random DW and b=0 image  
-            if b0_file is None:
-                list_b0 = sorted(glob.glob(os.path.join(sub_i, ped_i, 'b0', '*.nii*')))
-                list_b0 = [os.path.split(list_b0[j])[-1] for j in range(len(list_b0))]
-                ind_b0 = np.random.choice(range(0, len(list_b0)))   
-                b0_file_i = list_b0[ind_b0]
-            else:
-                b0_file_i = b0_file
-            
-            if dw_file is None:
-                list_dw = sorted(glob.glob(os.path.join(sub_i, ped_i, bval_i, '*.nii*')))
-                list_dw = [os.path.split(list_dw[j])[-1] for j in range(len(list_dw))]
-                ind_dw = np.random.choice(range(0, len(list_dw))) 
-                dw_file_i = list_dw[ind_dw]
-            else:
-                dw_file_i = dw_file
-                
-            b0 = sitk.ReadImage(os.path.join(sub_i, ped_i, 'b0', b0_file_i))
-            dw = sitk.ReadImage(os.path.join(sub_i, ped_i, bval_i, dw_file_i))
-            if get_dwmean:
-                dw_mean = sitk.ReadImage(glob.glob(os.path.join(sub_i, ped_i,'*_b' + str(target_bval) + '_mean.nii.gz'))[0])
-            
-            if np.random.rand() < spat_aug_prob:
-                if aug_dire is not None:
-                    aug = augmentation.spatial_aug_dir(b0, dire=aug_dire)
-                else:
-                    aug = augmentation.spatial_aug(b0)
-                aug.set_aff_params()
-                aug.set_diffeo_params()  
-                aug.gen_transfo()
-                if get_dwmean:
-                    b0, dw, dw_mean = aug.transform([b0, dw, dw_mean])
-                else:
-                    b0, dw = aug.transform([b0, dw])
-                    
-            if np.random.rand() < int_pair_aug_prob:
-                stat_filter = sitk.StatisticsImageFilter()
-                
-                stat_filter.Execute(b0)
-                b0_mu = stat_filter.GetMean()
-                b0_std = stat_filter.GetSigma()
-                b0 = (b0-b0_mu) / b0_std
-                
-                stat_filter.Execute(dw)
-                dw_mu = stat_filter.GetMean()
-                dw_std = stat_filter.GetSigma()
-                dw = (dw-dw_mu) / dw_std
-                
-                alpha = float(np.exp(np.random.normal(0,0.5)))
-                b0 = alpha*b0 + (1-alpha)*dw
-                beta = float(np.exp(np.random.normal(0,0.5)))
-                dw = beta*dw + (1-beta)*b0
-                
-            b0 = utils.normalize_intensities(b0, dtype=sitk.sitkFloat32)
-            b0 = utils.pad_image(b0, k=k)
-            b0 = sitk.GetArrayFromImage(b0)[np.newaxis,..., np.newaxis]
-                        
-            dw = utils.normalize_intensities(dw, dtype=sitk.sitkFloat32)
-            dw = utils.pad_image(dw, k=k)
-            dw = sitk.GetArrayFromImage(dw)[np.newaxis,..., np.newaxis]
-            
-            if get_dwmean:
-                dw_mean = utils.normalize_intensities(dw_mean, dtype=sitk.sitkFloat32)
-                dw_mean = utils.pad_image(dw_mean, k=k)
-                dw_mean = sitk.GetArrayFromImage(dw_mean)[np.newaxis,..., np.newaxis]
-            
-            if sl_axi is not None:
-                b0 = b0[:,sl_axi,:,:,:]
-                dw = dw[:,sl_axi,:,:,:]
-                dw_mean = dw_mean[:,sl_axi,:,:,:]
-                
-            b0s += [b0]
-            dws += [dw]
-            if get_dwmean:
-                dws_mean += [dw_mean]
-        
-        if get_dwmean:
-            yield [np.concatenate(b0s,axis=0), np.concatenate(dws,axis=0), np.concatenate(dws_mean,axis=0)]
-        else:
-            yield [np.concatenate(b0s,axis=0), np.concatenate(dws,axis=0)]
         
 
 

@@ -24,7 +24,7 @@ parser.add_argument('-o', '--out-dir', type=str, required=True, help='Path to ou
 parser.add_argument('-ot', '--out-transfo', type=int, required=False, default=0, help='Also output transformations (1:yes, 0:no). Default: 0.')
 parser.add_argument('-os', '--out-seg', type=int, required=False, default=0, help='Also output moved segmentations (1:yes, 0:no). Default: 0.')
 parser.add_argument('-oa', '--out-aux', type=int, required=False, default=0, help='Also output moved auxiliary images (1:yes, 0:no). Default: 0.')
-parser.add_argument('-ohot', '--one-hot', type=int, required=False, default=1, help='Perform one-hot encoding on moved output segmentations (1:yes, 0:no). Default: 1.')
+parser.add_argument('-ohot', '--one-hot', type=int, required=False, default=0, help='Perform one-hot encoding on moved output segmentations (1:yes, 0:no). Default: 1.')
 parser.add_argument('-mask', '--mask', type=int, required=False, default=1, help='Perform masking using all labels except 24 (1:yes, 0:no). Default: 1.')
 parser.add_argument('-kpad', '--k-padding', type=int, required=False, default=5, help='Pad an image such that image size along each dimension  is a multiple of 2^k (k must be greater than the number of contracting levels). Default: 5.')
 parser.add_argument('-ext', '--ext', type=str, required=False, default='.nii.gz', help="Extension of output images. Default: '.nii.gz'.")

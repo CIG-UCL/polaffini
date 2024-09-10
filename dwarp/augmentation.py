@@ -7,9 +7,121 @@ import SimpleITK as sitk
 import tensorflow as tf
 import scipy
 import matplotlib.pyplot as plt
-import utils
+import polaffini.utils as utils
 import time
 
+
+
+class intensity_aug:
+    
+    def __init__(self, n_cpts=20, fix0=True,
+                 std_defo_add=None, std_defo_mult=None, std_defo_smo=None,
+                 distrib_noise=None, max_snr=50):
+        
+        self.n_cpts = n_cpts
+        self.std_defo_add = std_defo_add
+        self.std_defo_mult = std_defo_mult
+        self.std_defo_smo = std_defo_smo
+        self.fix0 = fix0
+        self.distrib_noise = distrib_noise
+        self.max_snr = max_snr
+        
+    def transform(self, x_img):
+        
+        x = sitk.GetArrayFromImage(x_img)
+        
+        self.compute_defo_parameters(x)
+        self.compute_defo(x)
+        self.compute_noise(x)
+                
+        defo_add_img = sitk.GetImageFromArray(self.defo_add)
+        defo_add_img.CopyInformation(x_img)
+        defo_add_img = sitk.Cast(defo_add_img, x_img.GetPixelID())
+        
+        defo_mult_img = sitk.GetImageFromArray(self.defo_mult)
+        defo_mult_img.CopyInformation(x_img)
+        defo_mult_img = sitk.Cast(defo_mult_img, x_img.GetPixelID())
+
+        noise_img = sitk.GetImageFromArray(self.noise)
+        noise_img.CopyInformation(x_img)
+        noise_img = sitk.Cast(noise_img, x_img.GetPixelID())
+        
+        return x_img * defo_mult_img + defo_add_img + noise_img
+    
+    
+    def compute_defo_parameters(self, x):
+        
+        if self.n_cpts > 0:
+            self.x_shape = x.shape
+            self.bounds = [np.amin(x), np.amax(x)]
+            
+            if self.std_defo_add is None:
+                self.std_defo_add = np.std(np.ravel(x))
+                
+            if self.std_defo_mult is None:
+                self.std_defo_mult = 0.25
+                
+            if self.std_defo_smo is None:
+                self.std_defo_smo = (self.bounds[1]-self.bounds[0]) / self.n_cpts 
+    
+            self.cpts = np.squeeze(scipy.stats.qmc.Sobol(1).random(self.n_cpts))
+            self.cpts = (self.bounds[1]-self.bounds[0]) * self.cpts + self.bounds[0]
+            
+            self.loc_defo_add = self.std_defo_add*np.random.randn(self.n_cpts) 
+            self.loc_defo_mult = np.exp(np.log(1+self.std_defo_mult)*np.random.randn(self.n_cpts))
+
+        
+    def compute_defo(self, x):  
+        
+        if self.n_cpts > 0:
+            defo_add = np.zeros(self.x_shape)
+            defo_mult = np.zeros(self.x_shape)
+            weight_sum = np.zeros_like(x) + 1e-15
+            for c in range(self.n_cpts):
+                weight = np.exp(-(x - self.cpts[c])**2 / (2*self.std_defo_smo**2))
+                defo_add += weight * self.loc_defo_add[c]
+                defo_mult += weight * self.loc_defo_mult[c]
+                weight_sum += weight
+            defo_add /= weight_sum
+            defo_mult /= weight_sum
+    
+            if self.fix0:
+                loc_defo_add = -defo_add[x == 0][0]
+                loc_defo_mult = 1/defo_mult[x == 0][0] - 1
+                weight = np.exp(-x**2 / (2*self.std_defo_smo**2))
+                defo_add += weight * loc_defo_add
+                defo_mult *= 1 + weight * loc_defo_mult 
+                
+            self.defo_add = defo_add
+            self.defo_mult = defo_mult
+            
+        else:
+            self.defo_add = np.zeros_like(x)
+            self.defo_mult = np.ones_like(x)
+
+    
+    def compute_noise(self, x):
+        
+        snr = self.max_snr * np.random.rand()
+        sample_signal = np.quantile(x.ravel(), 0.8)
+        sigma = sample_signal / snr
+        
+        if self.distrib_noise in ('rician', 'gaussian'):
+            noise = np.random.normal(0, sigma, x.shape)
+        
+            if self.distrib_noise == 'rician':
+                noise_imag = np.random.normal(0, sigma, x.shape)
+                x_real_noisy = x + noise
+                x_imag_noisy = noise_imag
+                noise = np.sqrt(x_real_noisy**2 + x_imag_noisy**2) - x
+        
+        else:
+            noise = np.zeros_like(x)
+        
+        self.noise = noise
+        
+        
+    
 class spatial_aug:
     
     def __init__(self, img_geom, dire=None):
