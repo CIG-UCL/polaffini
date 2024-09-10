@@ -167,8 +167,7 @@ def mov2atlas_initialized(mov_files,
         Batch of repeated reference image. If there is weights, they are concatenated along the last axis.
         Batch of repeated reference segmentation. (optional).
     """
-    
-    print(dtype)
+
     is_weight = weight_file is not None
     is_seg = (mov_seg_files is not None) and (ref_seg_file is not None)
     

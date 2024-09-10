@@ -138,7 +138,6 @@ class Dice:
     def loss(self, y_true, y_pred):
 
         dices = self.dices(y_true, y_pred)
-            
         return -tf.reduce_mean(dices)
     
     def dices(self, y_true, y_pred):
@@ -150,11 +149,11 @@ class Dice:
             for l in self.labels:
                 y_true_l = tf.cast(y_true == l, tf.uint16)
                 y_pred_l = tf.cast(y_pred == l, tf.uint16)           
-                dices += [self.dice(y_true_l, y_pred_l)]
+                dices += [self.dice(y_true_l, y_pred_l, l)]
         
         return dices
         
-    def dice(self, y_true, y_pred): 
+    def dice(self, y_true, y_pred, l): 
         
         ndims = len(y_pred.get_shape().as_list()) - 2
         vol_axes = list(range(1, ndims + 1))
@@ -165,6 +164,9 @@ class Dice:
         div_no_nan = tf.math.divide_no_nan if hasattr(
             tf.math, 'divide_no_nan') else tf.div_no_nan  
         dice = div_no_nan(top, bottom)
+        
+        if tf.squeeze(dice) > 1:
+            tf.print(l, tf.squeeze(dice), tf.squeeze(top), tf.squeeze(bottom), tf.reduce_sum(y_true), tf.reduce_sum(y_pred))
         
         return tf.squeeze(dice)
         

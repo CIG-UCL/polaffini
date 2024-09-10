@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description="Training script for dwarp diffeomo
 parser.add_argument('-t', '--train_data', type=str, required=True, help='Path to the training data initialized using pretrain script (should be the same as the -o from pretrain script).')
 parser.add_argument('-v', '--val_data', type=str, required=False, default=None, help='Path to the validation data initialized using pretrain script (should be the same as the -o from pretrain script).')
 parser.add_argument('-s', '--use-seg', type=int, required=False, default=0, help='Use segmentations at training (1: yes, 0: no). Default: 0.')
-parser.add_argument('-ohot', '--ohot', type=int, required=False, default=0, help='Segmentations are one-hot encoded (1: yes, 0: no). Default: 1.')
+parser.add_argument('-ohot', '--ohot', type=int, required=False, default=0, help='Segmentations are one-hot encoded (1: yes, 0: no). Default: 0.')
 # model and its hyper-paramaters
 parser.add_argument('-o', '--model', type=str, required=True, help="Path to the output model (.h5).")
 parser.add_argument('-lr', '--learning-rate', type=float, required=False, default=1e-4, help="Learning rate. Default: 1e-4.")
@@ -39,6 +39,7 @@ parser.add_argument('-lw', '--loss-win', type=int, required=False, default=5, he
 parser.add_argument('-wi', '--weight-img-loss', type=float, required=False, default=1, help="Weight for the image loss. Default: 1.")
 parser.add_argument('-ws', '--weight-seg-loss', type=float, required=False, default=0.01, help="Weight for the segmentation loss. Default: 0.01.")
 parser.add_argument('-wr', '--weight-reg-loss', type=float, required=False, default=1, help="Weight for the regularization loss. Default: 1.")
+parser.add_argument('-omit_labs','--omit-labs', type=int, nargs='+', required=False, default=[], help='List of labels to omit. Default: []. 0 (background) is always omitted.')
 # other
 parser.add_argument('-r', '--resume', type=int, required=False, default=0, help='Resume a traning that stopped for some reason (1: yes, 0: no). Default: 0.')
 parser.add_argument('-seed', '--seed', type=int, required=False, default=None, help='Seed for random. Default: None.')
@@ -111,8 +112,11 @@ if args.use_seg:
     if args.ohot:
         labels = None
     else:
-        labels = np.unique(sample[1][1]).tolist()
-      
+        labels = np.unique(sample[1][1])
+        labels = np.delete(labels, labels==0)
+        for l in args.omit_labs:
+            labels = np.delete(labels, labels==l)
+        
 #%% Prepare and build the model
 
 if args.loss == 'nlcc':
