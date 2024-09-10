@@ -1,7 +1,8 @@
 channels:
-  - defaults
   - nodefaults
+  - anaconda
 dependencies:
+  - git=2.45.2
   - pip=24.2
   - python=3.10
   - pip:
