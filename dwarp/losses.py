@@ -147,8 +147,8 @@ class Dice:
         else:
             dices = []
             for l in self.labels:
-                y_true_l = tf.cast(y_true == l, tf.uint16)
-                y_pred_l = tf.cast(y_pred == l, tf.uint16)           
+                y_true_l = tf.cast(y_true == l, tf.float32)
+                y_pred_l = tf.cast(y_pred == l, tf.float32)           
                 dices += [self.dice(y_true_l, y_pred_l, l)]
         
         return dices
@@ -164,9 +164,6 @@ class Dice:
         div_no_nan = tf.math.divide_no_nan if hasattr(
             tf.math, 'divide_no_nan') else tf.div_no_nan  
         dice = div_no_nan(top, bottom)
-        
-        if tf.squeeze(dice) > 1:
-            tf.print(l, tf.squeeze(dice), tf.squeeze(top), tf.squeeze(bottom), tf.reduce_sum(y_true), tf.reduce_sum(y_pred))
         
         return tf.squeeze(dice)
         
