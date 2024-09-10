@@ -7,8 +7,7 @@ import tensorflow as tf
 import voxelmorph           
 import dwarp
 import argparse
-import generators
-import utils
+import dwarp.generators as generators
 import numpy
 import random
 
@@ -186,7 +185,7 @@ hist = model.fit(gen_train,
                  callbacks=[save_callback, csv_logger], #, plot_reg],
                  verbose=1)
 
-utils.plot_losses(args.model[:-3] + '_losses.csv', is_val=is_val)
+dwarp.utils.plot_losses(args.model[:-3] + '_losses.csv', is_val=is_val)
 
 
 
