@@ -18,7 +18,7 @@ gpus = tf.config.experimental.list_physical_devices('GPU')
 tf.config.experimental.set_virtual_device_configuration(gpus[0],
                                                         [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=12000)])          
         
-parser = argparse.ArgumentParser(description="Training script for dwarp diffeomorphic registration to template. TetraReg segmentation-based initialization")
+parser = argparse.ArgumentParser(description="Training script for dwarp diffeomorphic registration to template. POLAFFINI segmentation-based initialization")
 
 # training and validation data
 parser.add_argument('-t', '--train_data', type=str, required=True, help='Path to the training data initialized using pretrain script (should be the same as the -o from pretrain script).')

@@ -121,7 +121,7 @@ def mov2atlas_res(mov_files,
             inputs += [mov_segs]
             groundTruths += [ref_seg]
             
-        field0 = np.zeros((batch_size, *inshape, ndims))
+        field0 = np.zeros((*mov_imgs.shape[:-1], ndims))
         groundTruths += [field0]
         
         yield (inputs, groundTruths)
