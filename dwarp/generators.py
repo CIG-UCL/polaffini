@@ -150,11 +150,13 @@ def mov2atlas_initialized(mov_files,
     ref_file : string.
         Path to single target image. 
     mov_seg-files : list, optional.
-        Path to moving segmentations (in one-hot encoding).
+        Path to moving segmentations.
     ref_seg_file : string, optional.
-        Path to target segmentation (in one-hot encoding).
+        Path to target segmentation.
     weight_file : string, optional.
         Path to weight map associated to target atlas. Default: None.
+    one_hot : bool, optional.
+        Switch indicating if the segemntations are encoded in one-hot or not. Default: True.
     batch_size : int, optional.
         Batch size. Default: 1.
 
