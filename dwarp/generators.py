@@ -229,11 +229,9 @@ def mov2atlas_initialized(mov_files,
         if is_seg:
             inputs += [mov_segs]
             groundTruths += [ref_seg]
-            
-<<<<<<< HEAD
-=======
+
         field0 = np.zeros((*mov_imgs.shape[:-1], ndims), np.float32)    
->>>>>>> b599f4900bb28e478edd79cfc9ccacd3089059fc
+
         groundTruths += [field0]
         
         yield (inputs, groundTruths)

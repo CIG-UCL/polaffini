@@ -14,9 +14,9 @@ import polaffini.utils as utils
 import random
 
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
-gpus = tf.config.experimental.list_physical_devices('GPU')
-tf.config.experimental.set_virtual_device_configuration(gpus[0],
-                                                        [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=12000)])          
+# gpus = tf.config.experimental.list_physical_devices('GPU')
+# tf.config.experimental.set_virtual_device_configuration(gpus[0],
+#                                                         [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=12000)])          
         
 parser = argparse.ArgumentParser(description="Training script for dwarp diffeomorphic registration to template. POLAFFINI segmentation-based initialization")
 
@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description="Training script for dwarp diffeomo
 parser.add_argument('-t', '--train_data', type=str, required=True, help='Path to the training data initialized using pretrain script (should be the same as the -o from pretrain script).')
 parser.add_argument('-v', '--val_data', type=str, required=False, default=None, help='Path to the validation data initialized using pretrain script (should be the same as the -o from pretrain script).')
 parser.add_argument('-s', '--use-seg', type=int, required=False, default=0, help='Use segmentations at training (1: yes, 0: no). Default: 0.')
-parser.add_argument('-ohot', '--ohot', type=int, required=False, default=1, help='Segmentations are one-hot encoded (1: yes, 0: no). Default: 1.')
+parser.add_argument('-ohot', '--ohot', type=int, required=False, default=0, help='Segmentations are one-hot encoded (1: yes, 0: no). Default: 1.')
 # model and its hyper-paramaters
 parser.add_argument('-o', '--model', type=str, required=True, help="Path to the output model (.h5).")
 parser.add_argument('-lr', '--learning-rate', type=float, required=False, default=1e-4, help="Learning rate. Default: 1e-4.")
@@ -133,13 +133,6 @@ loss_weights += [args.weight_reg_loss]
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=args.learning_rate)
 
-# # TensorFlow handling
-# device, nb_devices = vxm.tf.utils.setup_device(arg.gpu)
-# assert np.mod(arg.batch_size, nb_devices) == 0, \
-#     f'batch size {arg.batch_size} not a multiple of the number of GPUs {nb_devices}'
-# assert tf.__version__.startswith('2'), f'TensorFlow version {tf.__version__} is not 2 or later'
-
-# with tf.device(device):
 if args.resume:
     # load existing model
     model = dwarp.networks.diffeo2atlas.load(args.model)
