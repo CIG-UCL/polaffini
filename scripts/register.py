@@ -32,8 +32,9 @@ parser.add_argument('-rs', '--ref-seg', type=str, required=False, default=None, 
 # output files
 parser.add_argument('-oi', '--out-img', type=pathlib.Path, required=False, default=None, help='Path to the output moved image. If a directory is specified, moved images will be saved there with the same name as the moving image')
 parser.add_argument('-os', '--out-seg', type=pathlib.Path, required=False, default=None, help='Path to the output moved segmentation. If a directory is specified, moved segmentations will be saved there with the same name as the moving image')
-parser.add_argument('-ot', '--out-transfo', type=pathlib.Path, required=False, default=None, help='Path to the output transformation. If a directory is specified, transformations will be saved there with the same name as the moving image')
-parser.add_argument('-of', '--out-svf', type=pathlib.Path, required=False, default=None, help='Path to the output transformation in SVF form. If a directory is specified, transformations will be saved there with the same name as the moving image')
+parser.add_argument('-ot', '--out-transfo', type=pathlib.Path, required=False, default=None, help='Path to the output full transformation (all combined). If a directory is specified, transformations will be saved there with the same name as the moving image')
+parser.add_argument('-of', '--out-svf', type=pathlib.Path, required=False, default=None, help='Path to the output transformation in SVF form (from the DL model only). If a directory is specified, transformations will be saved there with the same name as the moving image')
+parser.add_argument('-of0', '--out-svf0', type=pathlib.Path, required=False, default=None, help='Path to the output transformation in SVF form (from the DL model only). If a directory is specified, transformations will be saved there with the same name as the moving image')
 # polaffini parameters
 parser.add_argument('-polaffini', '--polaffini', type=int, required=False, default=1, help='Perform POLAFFINI (1:yes, 0:no). Default: 1.')
 parser.add_argument('-noinit', '--noinit', type=int, required=False, default=0, help='Just read images without any kind of initialization. Default: 0.')
@@ -59,13 +60,15 @@ out_img_path: pathlib.Path = args.out_img
 out_seg_path: pathlib.Path = args.out_seg
 out_transfo_path: pathlib.Path = args.out_transfo
 out_svf_path: pathlib.Path = args.out_svf
+out_svf0_path: pathlib.Path = args.out_svf0
 
 if mov_img_path.is_dir():
     if (mov_seg_path is not None and not mov_seg_path.is_dir()) \
         or (out_img_path is not None and not out_img_path.is_dir()) \
         or (out_seg_path is not None and not out_seg_path.is_dir()) \
         or (out_transfo_path is not None and not out_transfo_path.is_dir()) \
-        or (out_svf_path is not None and not out_svf_path.is_dir()):
+        or (out_svf_path is not None and not out_svf_path.is_dir()) \
+        or (out_svf0_path is not None and not out_svf0_path.is_dir()):
         sys.exit("\nWhen specifying a directory as input, an existing directory must also be passed for the moving segmentations and all output paths.")
 
 if mov_seg_path is None and (args.polaffini or out_seg_path is not None):
