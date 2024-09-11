@@ -3,6 +3,7 @@ import numpy as np
 import scipy.spatial
 from scipy.linalg import logm, expm
 import copy
+from . import utils
 
 #%% 
 
@@ -170,54 +171,6 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
 
 #%% Utils
 
-def integrate_svf(svf, int_steps=7):
-    
-    ndims = svf.GetDimension()
-
-    # scaling
-    svf = sitk.Compose([sitk.VectorIndexSelectionCast(svf, d)/(2**int_steps) for d in range(ndims)])
-
-    # squaring
-    tr2disp = sitk.TransformToDisplacementFieldFilter()
-    tr2disp.SetReferenceImage(svf)
-    transfo = sitk.DisplacementFieldTransform(svf)
-
-    compo_transfo = sitk.CompositeTransform(transfo)        
-    for _ in range(int_steps):  
-        svf = tr2disp.Execute(compo_transfo)
-        transfo = sitk.DisplacementFieldTransform(svf)    
-        compo_transfo.AddTransform(transfo)
-    
-    return compo_transfo
-
-
-def integrate_svf_lowMem(svf, int_steps=7, out_tr=True, alpha=1):
-    
-    ndims = svf.GetDimension()
-    
-    if alpha != 1:
-        print(alpha)
-        svf = sitk.Compose([sitk.VectorIndexSelectionCast(svf, d) * alpha for d in range(ndims)])
-        
-    # scaling
-    svf = sitk.Compose([sitk.VectorIndexSelectionCast(svf, d)/(2**int_steps) for d in range(ndims)])
-
-    # squaring
-    resampler = sitk.ResampleImageFilter()
-    resampler.SetInterpolator(sitk.sitkLinear)
-    resampler.SetUseNearestNeighborExtrapolator(True)
-    resampler.SetReferenceImage(svf)
-    for _ in range(int_steps): 
-        svf0 = copy.deepcopy(svf)
-        transfo = sitk.DisplacementFieldTransform(svf)    
-        resampler.SetTransform(transfo)
-        svf = svf0 + resampler.Execute(svf0)
-    
-    if out_tr:
-        return sitk.DisplacementFieldTransform(svf)
-    else:
-        return svf
-
 
 def scale_aff_transfo(aff_transfo, alpha):
     
@@ -247,11 +200,11 @@ def get_full_transfo(aff_init, polyAff_svf, invert=False, alpha=1):
             transfo_full = aff_init
     else:
         if invert:
-            polyAff = integrate_svf_lowMem(-polyAff_svf)
+            polyAff = utils.integrate_svf(-polyAff_svf)
             transfo_full = sitk.CompositeTransform(polyAff)
             transfo_full.AddTransform(aff_init.GetInverse())
         else:
-            polyAff = integrate_svf_lowMem(polyAff_svf)
+            polyAff = utils.integrate_svf(polyAff_svf)
             transfo_full = sitk.CompositeTransform(aff_init)
             transfo_full.AddTransform(polyAff)
     return transfo_full
@@ -370,16 +323,13 @@ def get_full_svf(aff_init, polyAff_svf, polyAff_svf_jac=None, bch_order=2):
     direction = polyAff_svf.GetDirection()
     spacing = polyAff_svf.GetSpacing()
     
-    aff_mat = np.reshape(aff_init.GetParameters()[:-ndims], (ndims,ndims))
-    aff_mat = np.c_[aff_mat, aff_init.GetParameters()[ndims**2:]]
-    aff_mat = np.r_[aff_mat, np.reshape([0]*ndims+[1], (1,ndims+1))]
+    aff_svf = utils.aff_to_svf()
+    
+    aff_mat = utils.aff_tr2mat(aff_init)
     log_aff_mat = logm(aff_mat)
-    log_aff = sitk.AffineTransform(ndims)
-    log_aff.SetMatrix(np.ravel(log_aff_mat[:ndims,:ndims] + np.eye(ndims)))
-    log_aff.SetTranslation(log_aff_mat[:ndims,ndims])
-    trsf2disp = sitk.TransformToDisplacementFieldFilter()
-    trsf2disp.SetReferenceImage(polyAff_svf)
-    aff_svf = sitk.GetArrayFromImage(trsf2disp.Execute(log_aff))
+    log_aff = utils.aff_mat2tr(log_aff_mat)
+    aff_svf = utils.aff_tr2field(log_aff)
+    aff_svf = sitk.GetArrayFromImage(aff_svf)
     aff_svf = aff_svf.reshape(volshape + (ndims,1))
 
     polyAff_svf = sitk.GetArrayFromImage(polyAff_svf)
