@@ -52,7 +52,8 @@ size = geom.GetSize()
 
 
 print('Composing transformations...')
-transfo_full = sitk.CompositeTransform(ndims)
+
+transfo_list = []
 for t in range(len(args.transfos)):
     print(' - transfo ',t+1)
     if args.transfos[t].suffix == '.txt':        
@@ -70,8 +71,14 @@ for t in range(len(args.transfos)):
                 transfo = sitk.Compose([-sitk.VectorIndexSelectionCast(transfo, i) for i in range(ndims)])
             transfo = utils.integrate_svf(transfo, out_tr=False)
         transfo = sitk.DisplacementFieldTransform(transfo)
-    transfo_full.AddTransform(transfo) 
+    transfo_list += [transfo]
 
+if args.invert:
+    transfo_list = transfo_list[::-1]
+
+transfo_full = sitk.CompositeTransform(ndims)
+for transfo in transfo_list:
+    transfo_full.AddTransform(transfo) 
 
 print('Resampling...')
 resampler = sitk.ResampleImageFilter()
