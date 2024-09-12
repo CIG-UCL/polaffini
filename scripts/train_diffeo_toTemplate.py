@@ -39,7 +39,7 @@ parser.add_argument('-lw', '--loss-win', type=int, required=False, default=5, he
 parser.add_argument('-wi', '--weight-img-loss', type=float, required=False, default=1, help="Weight for the image loss. Default: 1.")
 parser.add_argument('-ws', '--weight-seg-loss', type=float, required=False, default=0.01, help="Weight for the segmentation loss. Default: 0.01.")
 parser.add_argument('-wr', '--weight-reg-loss', type=float, required=False, default=1, help="Weight for the regularization loss. Default: 1.")
-parser.add_argument('-omit_labs','--omit-labs', type=int, nargs='+', required=False, default=[], help='List of labels to omit. Default: []. 0 (background) is always omitted.')
+parser.add_argument('-omit_labs','--omit-labs', type=int, nargs='+', required=False, default=[], help='List of labels to omit for Dice. Default: []. 0 (background) is always omitted.')
 # other
 parser.add_argument('-r', '--resume', type=int, required=False, default=0, help='Resume a traning that stopped for some reason (1: yes, 0: no). Default: 0.')
 parser.add_argument('-seed', '--seed', type=int, required=False, default=None, help='Seed for random. Default: None.')
