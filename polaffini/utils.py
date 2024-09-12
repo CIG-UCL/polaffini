@@ -273,7 +273,7 @@ def get_real_field(field, matO, nobatch=False):
         
     field = np.expand_dims(field, -1)
     linearPartO = np.expand_dims(matO[:-1,:-1], list(range(extdims+1))) 
-    perm = np.expand_dims(np.eye(ndims)[::-1], list(range(extdims+1))) # permut dimensions from voxelmorph to itk
+    perm = np.expand_dims(np.eye(ndims)[::-1], list(range(extdims+1))) # permut dimensions from numpy to itk
     
     field_real = np.matmul(linearPartO, np.matmul(perm,field))     
     

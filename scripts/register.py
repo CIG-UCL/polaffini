@@ -14,10 +14,6 @@ import argparse
 import pathlib
 from typing import Optional
 
-import faulthandler
-with open('/scratch0/NOT_BACKED_UP/alegouhy/tmp/fault.log', 'w') as f:
-    faulthandler.enable(file=f)
-    
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 parser = argparse.ArgumentParser(description="")
@@ -93,6 +89,7 @@ if args.polaffini:
 model = dwarp.networks.diffeo2atlas.load(args.model)
 
 inshape = model.output_shape[0][1:-1]
+size = inshape[::-1]
 ndims = len(inshape)
 matO = np.asmatrix(model.config.params['orientation'])
 origin, spacing, direction = utils.decomp_matOrientation(matO)
@@ -150,13 +147,13 @@ for i in range(len(mov_img_names)):
         resampler.SetOutputSpacing(spacing)
         resampler.SetOutputDirection(direction)
         resampler.SetTransform(transfo_full)
-        resampler.SetSize(inshape)
+        resampler.SetSize(size)
         mov = resampler.Execute(moving)
         mov = utils.normalize_intensities(mov)
 
     else:
         if not args.noinit:
-            mov = utils.resample_image(moving, inshape, matO, sitk.sitkLinear)
+            mov = utils.resample_image(moving, size, matO, sitk.sitkLinear)
             mov = utils.normalize_intensities(mov)
         else:
             mov = moving
@@ -168,7 +165,7 @@ for i in range(len(mov_img_names)):
     resampler.SetOutputOrigin(origin)
     resampler.SetOutputSpacing(spacing)
     resampler.SetOutputDirection(direction)
-    resampler.SetSize(inshape)
+    resampler.SetSize(size)
     resampler.SetInterpolator(sitk.sitkLinear)
     
     svf_all = []
@@ -266,6 +263,6 @@ for i in range(len(mov_img_names)):
         for i in range(args.nb_passes):
             if args.nb_passes > 1:
                 out_path = out_basename.with_name(out_basename.name + "_" + str(i)).with_suffix(out_suffix)
-            utils.imageIO(out_path).write(svf[i])
+            utils.imageIO(out_path).write(svf_all[i])
 
 print('\nboom\n')
