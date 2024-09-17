@@ -40,13 +40,15 @@ parser.add_argument('-wr', '--weight-reg-loss', type=float, required=False, defa
 # polaffini parameters
 parser.add_argument('-sigma', '--sigma', type=float, required=False, default=15, help='Standard deviation (in mm) for the Gaussian kernel. The higher the sigma, the smoother the output transformation. Use inf for affine transformation. Default: 15.')
 parser.add_argument('-downf', '--down_factor', type=float, required=False, default=4, help='Downsampling factor of the transformation. Default: 4.')
-parser.add_argument('-omit_labs','--omit_labs', type=int, nargs='+', required=False, default=[], help='List of labels to omit. Default: []. Example: 2 41. 0 (background) is always omitted.')
+parser.add_argument('-omit-labs','--omit_labs', type=int, nargs='+', required=False, default=[], help='List of labels to omit. Default: []. Example: 2 41. 0 (background) is always omitted.')
+parser.add_argument('-p-gpu', '--polaffini_gpu', type=int, required=False, default=0, help='POLAFFINI with GPU implementation (1: yes, 0: no). Default: 0.')
 # other
 parser.add_argument('-r', '--resume', type=int, required=False, default=0, help='Resume a traning that stopped for some reason (1: yes, 0: no). Default: 0.')
 parser.add_argument('-seed', '--seed', type=int, required=False, default=None, help='Seed for random. Default: None.')
 
 args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 args.resume = bool(args.resume)
+args.polaffini_gpu = bool(args.polaffini_gpu)
 
 if args.seed is not None:
     random.seed(args.seed)
@@ -83,7 +85,8 @@ gen_train = generators.pair_polaffini(mov_files,
                                       sdf=is_sdf,
                                       polaffini_sigma=args.sigma,
                                       polaffini_downf=args.down_factor,
-                                      polaffini_omit_labs=args.omit_labs,      
+                                      polaffini_omit_labs=args.omit_labs,  
+                                      polaffini_usegpu=args.polaffini_gpu,
                                       batch_size=args.batch_size)
     
 n_train = len(mov_files)
@@ -104,7 +107,8 @@ else:
                                         sdf=is_sdf,
                                         polaffini_sigma=args.sigma,
                                         polaffini_downf=args.down_factor,
-                                        polaffini_omit_labs=args.omit_labs,      
+                                        polaffini_omit_labs=args.omit_labs,  
+                                        polaffini_usegpu=args.polaffini_gpu,
                                         batch_size=args.batch_size)
     n_val = len(mov_files_val)
     sample = next(gen_val)
