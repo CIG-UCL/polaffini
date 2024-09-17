@@ -38,7 +38,7 @@ def estimateTransfo(mov_seg,
     polyAff_svf : ITK image
         SVF form of the polyaffine transformation.
     """
-
+z
     volshape = ref_seg.shape
     ndims = len(volshape)
     

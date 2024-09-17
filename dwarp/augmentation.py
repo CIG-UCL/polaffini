@@ -300,6 +300,7 @@ class spatial_aug:
         nb_points = polyaff_params['nb_points']
         sigma = polyaff_params['sigma']
         int_steps = polyaff_params['int_steps']
+        disp =  polyaff_params['disp']
         
         theta = (sigma**2 + 4*(sigma/2)**2)**(1/2)/2 - sigma/2
         k = (sigma*(sigma + (sigma**2 + 4*(sigma/2)**2)**(1/2)))/(2*(sigma/2)**2) + 1
@@ -355,32 +356,30 @@ class spatial_aug:
         polyaff_svf = sitk.Compose([sitk.VectorIndexSelectionCast(polyaff_svf, d)/weight_map_sum for d in range(self.ndims)])
         polyaff = utils.integrate_svf(polyaff_svf, int_steps=int_steps)
         
-        ####
-        weight_map_sum = sitk.GetArrayFromImage(weight_map_sum)
-        img = sitk.GetArrayFromImage(self.img_geom)
-        if len(img.shape) == 3:
-            plt.subplot(1,3,1)
-            plt.imshow(img[45,:,:])
-            plt.axis('off')
-            plt.imshow(weight_map_sum[45,:,:], alpha=0.7)
-            plt.subplot(1,3,2)
-            plt.imshow(img[:,45,:])
-            plt.axis('off')
-            plt.imshow(weight_map_sum[:,45,:], alpha=0.7)
-            plt.subplot(1,3,3)
-            plt.imshow(img[:,:,35])
-            plt.axis('off')
-            plt.imshow(weight_map_sum[:,:,35], alpha=0.7)
-        else:
-            plt.imshow(weight_map_sum)
-        plt.show()
-        #####
+        if disp:
+            img = sitk.GetArrayFromImage(self.img_geom)
+            if len(img.shape) == 3:
+                plt.subplot(1,3,1)
+                plt.imshow(img[45,:,:])
+                plt.axis('off')
+                plt.imshow(weight_map_sum[45,:,:], alpha=0.7)
+                plt.subplot(1,3,2)
+                plt.imshow(img[:,45,:])
+                plt.axis('off')
+                plt.imshow(weight_map_sum[:,45,:], alpha=0.7)
+                plt.subplot(1,3,3)
+                plt.imshow(img[:,:,35])
+                plt.axis('off')
+                plt.imshow(weight_map_sum[:,:,35], alpha=0.7)
+            else:
+                plt.imshow(weight_map_sum)
+            plt.show()
            
         return polyaff
     
  
     def polyaff_transfo_gpu(self, polyaff_params):
-        t = time.time()
+
         nb_points = polyaff_params['nb_points']
         sigma = polyaff_params['sigma']
         int_steps = polyaff_params['int_steps']

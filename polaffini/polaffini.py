@@ -4,6 +4,7 @@ import scipy.spatial
 from scipy.linalg import logm, expm
 import copy
 from . import utils
+import time
 
 #%% 
 
@@ -55,23 +56,27 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
     ref_seg = sitk.Cast(ref_seg, sitk.sitkInt64)
     ndims = ref_seg.GetDimension()
     mov_seg = sitk.Cast(mov_seg, sitk.sitkInt64)
-    
+
     labs, _, _ = get_common_labels(ref_seg, mov_seg, omit_labs=omit_labs)
-    
+
     ref_seg_down = sitk.Shrink(ref_seg, [int(down_factor)]*ndims)    
     
     get_volumes = False
     if transfos_type == 'volrot':
         get_volumes = True
+
     ref_pts, ref_vols = get_label_stats(ref_seg, labs, get_volumes=get_volumes)
     mov_pts, mov_vols = get_label_stats(mov_seg, labs, get_volumes=get_volumes)
-     
+
     if transfos_type != 'translation':
         DT = delaunay_triangulation(ref_pts, labs)    
     
     aff_init = sitk.AffineTransform(ndims)
     if bg_transfo:
-        transfo_aff = opti_linear_transfo_between_point_sets(ref_pts, mov_pts, transfos_type) 
+        transfo_aff = opti_linear_transfo_between_point_sets(ref_pts, mov_pts, 
+                                                             ref_vol=np.sum(ref_vols) if ref_vols is not None else None,
+                                                             mov_vol=np.sum(mov_vols) if mov_vols is not None else None,
+                                                             transfos_type=transfos_type) 
         transfo_aff_mov = expm(alpha*logm(transfo_aff)) 
         transfo_aff_mov_inv = expm(-alpha*logm(transfo_aff)) 
         transfo_aff_ref = expm((1-alpha)*logm(transfo_aff)) 
@@ -82,7 +87,7 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
                                 + np.reshape(transfo_aff_mov_inv[0:ndims, ndims], (ndims,1))) 
         ref_pts = np.transpose(np.matmul(transfo_aff_ref[0:ndims, 0:ndims], np.transpose(ref_pts))
                                 + np.reshape(transfo_aff_ref[0:ndims, ndims], (ndims,1)))    
-        
+
     if sigma != float('inf'):
         
         weight_map_sum = sitk.Image(ref_seg_down.GetSize(), sitk.sitkFloat64)
@@ -107,10 +112,11 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
             maurerdist.SetSquaredDistance(True)
             maurerdist.SetUseImageSpacing(True)
 
-        for l, lab in enumerate(labs):         
+        for l, lab in enumerate(labs):  
+
             # Find local optimal local transfo
             if transfos_type == 'translation':
-                ind = [i == lab for i in labs]
+                ind = labs == lab
             else:
                 rows_l, _ = np.where(DT == lab)
                 connected_labs = np.unique(DT[rows_l])
@@ -120,11 +126,11 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
                 continue
             if transfos_type == 'rigid' and sum(ind) < 2:
                 continue
-                
+            
             loc_mat = opti_linear_transfo_between_point_sets(ref_pts[ind, :], 
                                                              mov_pts[ind, :], 
-                                                             ref_vol = ref_vols[l],
-                                                             mov_vol = mov_vols[l],
+                                                             ref_vol=ref_vols[l] if ref_vols is not None else None,
+                                                             mov_vol=mov_vols[l] if mov_vols is not None else None,
                                                              transfos_type=transfos_type)   
             loc_mat = alpha * logm(loc_mat)
             if not np.isrealobj(loc_mat):
@@ -233,7 +239,7 @@ def write_dispField(transfo, out_file, ref_image=None):
 
 def get_common_labels(seg_img1, seg_img2, omit_labs=[]):
     
-    omit_labs = omit_labs + [0]
+    omit_labs += [0]
     labs1 = np.unique(sitk.GetArrayFromImage(seg_img1))
     labs2 = np.unique(sitk.GetArrayFromImage(seg_img2))
     for l in omit_labs:
@@ -248,27 +254,17 @@ def get_label_stats(seg_img, labs, get_centroids=True, get_volumes=False):
     ndims = seg_img.GetDimension()
     seg_stat = sitk.LabelIntensityStatisticsImageFilter()
     seg_stat.Execute(seg_img, seg_img)
-    
-    stats = []
-    if get_centroids:
-        centroids = np.zeros((len(labs), ndims))
-    else:
-        centroids = [None]*len(labs)
-        
-    if get_volumes:
-        volumes =  np.zeros((len(labs)))
-    else:
-        volumes = [None]*len(labs)
+
+    centroids = np.zeros((len(labs), ndims)) if get_centroids else None
+    volumes =  np.zeros((len(labs)))  if get_volumes else None
         
     for l, lab in enumerate(labs):
         if get_centroids:
             centroids[l, :] = seg_stat.GetCenterOfGravity(int(lab))
         if get_volumes:
             volumes[l] = seg_stat.GetPhysicalSize(int(lab))
-    
-    stats = [centroids, volumes]
-            
-    return stats
+
+    return centroids, volumes
 
 
 def delaunay_triangulation(points, labs):
@@ -301,15 +297,14 @@ def opti_linear_transfo_between_point_sets(ref_pts, mov_pts,
         # see Pennec PhD or Horn 1987 for rigid
         corr = np.matmul(np.transpose(mov_pts), ref_pts)
         u, d, vt = np.linalg.svd(corr)
-        s = [1]*(ref_pts.shape[1]-1) + [round(np.linalg.det(u)*np.linalg.det(vt))]
+        s = [1]*(ndims-1) + [round(np.linalg.det(u)*np.linalg.det(vt))]
         linear_part = np.matmul(np.matmul(u, np.diag(s)),vt)
-        
         if transfos_type == 'volrot':
             linear_part *= (mov_vol / ref_vol) ** (1 / ndims)
     
     translat_part = mov_pts_mean - np.matmul(linear_part, ref_pts_mean)
     loc_mat = np.concatenate((linear_part, translat_part[:,np.newaxis]), axis=1)
-    loc_mat = np.concatenate((loc_mat, [[0]*(ref_pts.shape[1])+[1]]))
+    loc_mat = np.concatenate((loc_mat, [[0]*ndims+[1]]))
     
     return loc_mat
 

@@ -10,3 +10,5 @@ from . import losses
 from . import callbacks
 from . import augmentation
 from . import generators
+from . import polaffini_gpu
+

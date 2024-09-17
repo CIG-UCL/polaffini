@@ -169,7 +169,7 @@ for i in range(len(mov_img_names)):
     resampler.SetInterpolator(sitk.sitkLinear)
     
     svf_all = []
-    for _ in range(args.nb_passes):
+    for p in range(args.nb_passes):
         print('Registering through model...')
         _, field, svf = model.register(mov)
 
@@ -189,6 +189,13 @@ for i in range(len(mov_img_names)):
             svf.SetSpacing(spacing)
             svf.SetOrigin(origin)
             svf_all += [svf]
+
+        if p+1 < args.nb_passes:
+            resampler.SetTransform(transfo_full)
+            mov = resampler.Execute(moving)
+            mov = utils.resample_image(mov, size, matO, sitk.sitkLinear)
+            mov = utils.normalize_intensities(mov)
+            mov = sitk.GetArrayFromImage(mov)[np.newaxis,..., np.newaxis]
 
 
     print('Resampling...')

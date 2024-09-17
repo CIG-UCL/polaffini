@@ -61,7 +61,7 @@ def plot_losses(loss_file, is_val=False, write=True):
     f, axs = plt.subplots(1, nb_losses, figsize=(20,5))
     if nb_losses == 1: axs = [axs]
     f.dpi = 200
-    plt.rcParams['font.size'] = '3'
+    plt.rcParams['font.size'] = '10'
     plt.rcParams["xtick.major.size"] = 2
     plt.rcParams["ytick.major.size"] = 2
      

@@ -1,9 +1,8 @@
 import numpy as np
-import os
-import glob
 import SimpleITK as sitk        
 import polaffini.utils as utils
 import polaffini.polaffini as polaffini
+import dwarp.polaffini_gpu as polaffini_gpu
 import dwarp.augmentation as augmentation
 
 def mov2atlas_res(mov_files, 
@@ -248,6 +247,7 @@ def pair_polaffini(mov_files,
                    polaffini_sigma=15,
                    polaffini_downf=4,
                    polaffini_omit_labs=[2,23,41],      
+                   polaffini_usegpu=False,
                    batch_size=1):
     """
     Generator for a pair of moving images. 
@@ -303,8 +303,6 @@ def pair_polaffini(mov_files,
         mov_segs = []
         for _ in range(batch_size): 
             i, j = np.random.choice(range(len(mov_files)), size=2, replace=False)
-            # print(mov_files[i])
-            # print(mov_files[j])
             ref_img = sitk.ReadImage(mov_files[i])
             ref_seg = sitk.ReadImage(mov_seg_files[i])
             mask = sitk.BinaryThreshold(ref_seg, 1, 23) + sitk.BinaryThreshold(ref_seg, 25, 1e9)
@@ -333,12 +331,19 @@ def pair_polaffini(mov_files,
             mask = sitk.BinaryThreshold(mov_seg, 1, 23) + sitk.BinaryThreshold(mov_seg, 25, 1e9)
             mask = sitk.BinaryMorphologicalClosing(mask, [6]*3)
             mov_img = sitk.Mask(mov_img, mask)
-
-            init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=mov_seg, 
-                                                              ref_seg=ref_seg,
-                                                              sigma=polaffini_sigma,
-                                                              down_factor=polaffini_downf,
-                                                              omit_labs=polaffini_omit_labs)
+            
+            if polaffini_usegpu:
+                init_aff, polyAff_svf = polaffini.estimateTransfo(mov_seg=mov_seg, 
+                                                                  ref_seg=ref_seg,
+                                                                  sigma=polaffini_sigma,
+                                                                  down_factor=polaffini_downf,
+                                                                  omit_labs=polaffini_omit_labs)
+            else:
+                init_aff, polyAff_svf = polaffini_gpu.estimateTransfo(mov_seg=mov_seg, 
+                                                                      ref_seg=ref_seg,
+                                                                      sigma=polaffini_sigma,
+                                                                      down_factor=polaffini_downf,
+                                                                      omit_labs=polaffini_omit_labs) 
             transfo = polaffini.get_full_transfo(init_aff, polyAff_svf)  
             
             resampler = sitk.ResampleImageFilter()
