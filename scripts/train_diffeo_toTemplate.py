@@ -54,6 +54,8 @@ if args.seed is not None:
     np.random.seed(args.seed)
     tf.random.set_seed(args.seed)
 
+os.makedirs(os.path.dirname(args.model), exist_ok=True)
+
 with open(args.model[:-3] + '_args.txt', 'w') as file:
     for arg in vars(args):
         file.write("{}: {}\n".format(arg, getattr(args, arg)))
@@ -167,8 +169,6 @@ if not is_val:
 else:
     val_steps = n_val // args.batch_size
     monitor='val_loss'
-
-os.makedirs(os.path.dirname(args.model), exist_ok=True)
 
 model.save(args.model.format(epoch=initial_epoch))
 

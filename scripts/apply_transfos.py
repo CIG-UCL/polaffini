@@ -39,9 +39,9 @@ elif args.interp == 'spline':
 mov_img = utils.imageIO(args.mov_img).read()
 ndims = mov_img.GetDimension()
 if args.geom == "mni2":
-    geom_file = os.path.join(maindir, 'refs', 'mni_brain_2mm.nii.gz')
+    geom_file = os.path.join(maindir, 'refs', 'mni_t1_2mm.nii.gz')
 elif args.geom == "mni1":
-    geom_file = os.path.join(maindir, 'refs', 'mni_brain.nii.gz')
+    geom_file = os.path.join(maindir, 'refs', 'mni_t1.nii.gz')
 else:
     geom_file = args.geom
 geom = utils.imageIO(geom_file).read()

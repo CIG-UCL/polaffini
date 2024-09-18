@@ -272,6 +272,7 @@ class diffeo_pair_seg(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmD
     @ne.modelio.store_config_args
     def __init__(self,
                  inshape,
+                 vox_sz=None,
                  nb_labs=None,
                  nb_enc_features=[16, 32, 32, 32, 32],
                  nb_dec_features=[32, 32, 32, 32, 32, 16, 16],

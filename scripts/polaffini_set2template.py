@@ -124,10 +124,10 @@ def init_polaffini_set(mov_files,
 
 if args.ref_seg == "mni2" or args.ref_img == "mni2":
     args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt_2mm.nii.gz')
-    args.ref_img = os.path.join(maindir, 'refs', 'mni_brain_2mm.nii.gz')
+    args.ref_img = os.path.join(maindir, 'refs', 'mni_t1_2mm.nii.gz')
 elif args.ref_seg == "mni1" or args.ref_img == "mni1":
     args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt.nii.gz')
-    args.ref_img = os.path.join(maindir, 'refs', 'mni_brain.nii.gz')  
+    args.ref_img = os.path.join(maindir, 'refs', 'mni_t1.nii.gz')  
     
 os.makedirs(os.path.join(args.out_dir), exist_ok=True)
 os.makedirs(os.path.join(args.out_dir, 'img'), exist_ok=True)
