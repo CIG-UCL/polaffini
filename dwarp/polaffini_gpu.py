@@ -127,10 +127,12 @@ def estimateTransfo(mov_seg, ref_seg,
                 point = tf.expand_dims(ref_pts[:,l], axis=1) # distance to the control point
             else:
                 point = tf.reduce_mean(ref_neighbors_pts, axis=1, keepdims=True) # distance to the center of the neighborhood
-            weight_map = tf.reduce_sum((point-grid[..., :ndims, :])**2, axis=-2)         
+            weight_map = tf.reduce_sum((point-grid[..., :ndims, :])**2, axis=-2)     
+            print(weight_map.shape)
             weight_map = tf.exp(-weight_map / (2*sigma**2)) 
-
+            print(weight_map.shape)
             # Update polyaffine with current field
+            print(polyAff_svf.shape, weight_map.shape, (tf.matmul(loc_mat, grid)[..., 0]).shape, loc_mat.shape, grid.shape)
             polyAff_svf += weight_map * tf.matmul(loc_mat, grid)[..., 0]
             weight_map_sum += weight_map
 
@@ -161,6 +163,8 @@ def get_common_labels(seg1, seg2, omit_labs=[]):
     seg2 = tf.cast(seg2, dtype=tf.int32)
     labs1, _ = tf.unique(tf.reshape(seg1,(-1)))
     labs2, _ = tf.unique(tf.reshape(seg2,(-1)))
+    print(labs1)
+    print(labs2)
     for l in omit_labs:
         labs1 = labs1[labs1 != l]
         labs2 = labs2[labs2 != l]
@@ -175,7 +179,8 @@ def get_label_stats(seg, matO, spacing, labs, get_centroids=True, get_volumes=Fa
     
     centroids = [] if get_centroids else None
     volumes = [] if get_volumes else None
-
+    print(labs)
+    
     for lab in labs:
 
         lab_mask = seg == lab
@@ -183,11 +188,12 @@ def get_label_stats(seg, matO, spacing, labs, get_centroids=True, get_volumes=Fa
 
         if get_centroids:
             centroid = tf.reduce_mean(tf.cast(lab_coords, tf.float32), axis=0)
+            print(lab, centroid)
             centroids.append(centroid)
 
         if get_volumes:
             volumes.append(tf.shape(lab_coords)[0])
-
+    
     if get_centroids:
         centroids = tf.stack(centroids, axis=1)  
         centroids = tf.concat([centroids, tf.ones((1, len(labs)), dtype=tf.float32)], axis=0)
@@ -215,6 +221,7 @@ def opti_linear_transfo_between_point_sets(ref_pts, mov_pts,
     elif transfos_type == 'affine':
         linear_part = tf.transpose(tf.linalg.lstsq(tf.transpose(ref_pts), 
                                                    tf.transpose(mov_pts)))
+        
     elif transfos_type in ('rigid','volrot'):
         # see Pennec PhD or Horn 1987 for rigid
         corr = tf.matmul(mov_pts, tf.transpose(ref_pts))
