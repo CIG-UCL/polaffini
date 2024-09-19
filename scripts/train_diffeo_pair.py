@@ -185,6 +185,12 @@ imgdir = os.path.join(os.path.dirname(args.model), 'imgs')
 os.makedirs(imgdir, exist_ok=True)
 # plot_reg = dwarp.callbacks.plotImgReg(sample[0][1], sample[0][0], os.path.join(imgdir, 'img'), modeltype='diffeo_pair')
 
+workers = None
+use_multiprocessing = None
+if args.polaffini_gpu:
+    workers = 1
+    use_multiprocessing = False
+    
 hist = model.fit(gen_train,
                  validation_data=gen_val,
                  validation_steps=val_steps,
@@ -192,6 +198,8 @@ hist = model.fit(gen_train,
                  epochs=args.epochs,
                  steps_per_epoch=steps_per_epoch,
                  callbacks=[save_callback, csv_logger], #, plot_reg],
+                 workers=workers,
+                 use_multiprocessing=use_multiprocessing,
                  verbose=1)
 
 dwarp.utils.plot_losses(args.model[:-3] + '_losses.csv', is_val=is_val)
