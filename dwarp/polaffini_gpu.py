@@ -128,12 +128,14 @@ def estimateTransfo(mov_seg, ref_seg,
             else:
                 point = tf.reduce_mean(ref_neighbors_pts, axis=1, keepdims=True) # distance to the center of the neighborhood
             weight_map = tf.reduce_sum((point-grid[..., :ndims, :])**2, axis=-2)     
-            print(weight_map.shape)
             weight_map = tf.exp(-weight_map / (2*sigma**2)) 
-            print(weight_map.shape)
             # Update polyaffine with current field
-            print(polyAff_svf.shape, weight_map.shape, (tf.matmul(loc_mat, grid)[..., 0]).shape, loc_mat.shape, grid.shape)
-            polyAff_svf += weight_map * tf.matmul(loc_mat, grid)[..., 0]
+            try:
+                polyAff_svf += weight_map * tf.matmul(loc_mat, grid)[..., 0]
+            except Exception as e:
+                print("Mult SVF error:", e)
+                print("Local variables:", locals())
+                print("global variables:", globals())
             weight_map_sum += weight_map
 
         weight_map_sum += weight_bg*sigma*tf.sqrt(2*np.pi)
@@ -191,8 +193,9 @@ def get_label_stats(seg, matO, spacing, labs, get_centroids=True, get_volumes=Fa
             centroids.append(centroid)
             if centroid.shape != 3:
                 print('----------------------------------')
-                tf.print(lab_coords.shape)
-                tf.print(lab, centroid)
+                print('||||||||', lab_mask.shape, np.sum(lab_mask))
+                print('||||||||', lab_coords.shape)
+                print('||||||||', lab, centroid)
                 print('----------------------------------')
                 break
 
@@ -200,7 +203,12 @@ def get_label_stats(seg, matO, spacing, labs, get_centroids=True, get_volumes=Fa
             volumes.append(tf.shape(lab_coords)[0])
     
     if get_centroids:
-        centroids = tf.stack(centroids, axis=1)  
+        try:                                           ##############################
+            centroids = tf.stack(centroids, axis=1)  
+        except Exception as e:
+            print("Centroid error:", e)
+            print("Local variables:", locals())
+            print("global variables:", globals())
         centroids = tf.concat([centroids, tf.ones((1, len(labs)), dtype=tf.float32)], axis=0)
         centroids = tf.matmul(tf.cast(matO, tf.float32), centroids)[:-1, :]
         
