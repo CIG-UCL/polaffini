@@ -249,6 +249,7 @@ def pair_polaffini(mov_files,
                    polaffini_omit_labs=[2,23,41],      
                    polaffini_usegpu=False,
                    mov_ref_pair=False, # 1st mov is moving, 2nd is ref.
+                   get_matO = False,
                    batch_size=1):
     """
     Generator for a pair of moving images. 
@@ -307,6 +308,8 @@ def pair_polaffini(mov_files,
         ref_segs = []
         mov_imgs = [] 
         mov_segs = []
+        if get_matO:
+            matOs = []
         for _ in range(batch_size): 
             if mov_ref_pair:
                 i, j = 1, 0
@@ -335,7 +338,9 @@ def pair_polaffini(mov_files,
             ref_img = utils.normalize_intensities(ref_img)
             ref_seg = utils.change_img_res(ref_seg, vox_sz, interp=sitk.sitkNearestNeighbor)
             ref_seg = utils.change_img_size(ref_seg, grid_sz)
-   
+            if get_matO:
+                matO = utils.get_matOrientation(ref_img)
+                
             mov_img = sitk.ReadImage(mov_files[j])
             mov_seg = sitk.ReadImage(mov_seg_files[j])
 
@@ -382,15 +387,19 @@ def pair_polaffini(mov_files,
             else:
                 ref_segs += [ref_seg.astype(np.uint16)]
                 mov_segs += [mov_seg.astype(np.uint16)]
+            if get_matO:
+                matOs += [matO]
 
         ref_imgs = np.stack(ref_imgs, axis=0)
         ref_segs = np.stack(ref_segs, axis=0)
         mov_imgs = np.stack(mov_imgs, axis=0)
         mov_segs = np.stack(mov_segs, axis=0)
-
         field0 = np.zeros((batch_size, *np.flip(grid_sz), ndims), np.float32)
         
         inputs = [mov_imgs, ref_imgs, mov_segs, ref_segs]
+        if get_matO:
+            inputs += [np.stack(matOs, axis=0)]
+            
         groundTruths = [ref_imgs, mov_imgs, ref_segs, mov_segs, field0]
         
         yield (inputs, groundTruths)

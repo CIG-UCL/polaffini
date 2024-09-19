@@ -62,7 +62,7 @@ out_svf_path: pathlib.Path = args.out_svf
 if mov_img_path.is_dir():
     if (mov_seg_path is not None and not mov_seg_path.is_dir()):
         sys.exit("\nWhen specifying a directory as input, an existing directory must also be passed for the moving segmentations.")
-    if (out_img_path.suffix != '') \
+    if (out_img_path.suffix != '' if out_img_path is not None else False) \
         or (out_seg_path.suffix != '' if out_seg_path is not None else False) \
         or (out_transfo_path.suffix != '' if out_transfo_path is not None else False) \
         or (out_transfo_polaffini_aff_path.suffix != '' if out_transfo_polaffini_aff_path is not None else False) \

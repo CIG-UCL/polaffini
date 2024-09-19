@@ -51,7 +51,7 @@ def shift_to_transfo(loc_shift, indexing='ij'):
     return mesh + loc_shift
 
 
-def plot_losses(loss_file, is_val=False, write=True):
+def plot_losses(loss_file, is_val=False, write=True, suptitle=''):
 
     tab_loss = pd.read_csv(loss_file, sep=',')
     nb_losses = len(tab_loss.columns) - 1
@@ -71,12 +71,14 @@ def plot_losses(loss_file, is_val=False, write=True):
             axs[l].plot(tab_loss.epoch, tab_loss.loc[:,tab_loss.columns[nb_losses+l+1]], linewidth=0.5, label="validation")
         axs[l].set_title(tab_loss.columns[l+1], fontsize=12)
         axs[l].legend(prop={'size': 10})
-    
+        
     plt.tight_layout()
+    plt.suptitle(suptitle)
+    
     if write:
         filename, _ = os.path.splitext(loss_file)
         plt.savefig(filename + '.png')
-
+        
 
 
 def jacobian(transfo, outDet=False, dire=None, is_shift=False):

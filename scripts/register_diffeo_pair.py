@@ -43,10 +43,7 @@ parser.add_argument('-omit_labs','--omit_labs', type=int, nargs='+', required=Fa
 parser.add_argument('-bg_transfo','--bg_transfo', type=int, required=False, default=1, help='Compute an affine background transformation(1:yes, 0:no). Default: 1.')
 
 args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
-args.polaffini = bool(args.polaffini)
-args.noinit = bool(args.noinit)
-if args.noinit:
-    args.polaffini = False
+
 args.bg_transfo = bool(args.bg_transfo)
 
 ref_img_path: pathlib.Path = args.ref_img
@@ -63,7 +60,7 @@ out_svf_path: pathlib.Path = args.out_svf
 if mov_img_path.is_dir():
     if (mov_seg_path is not None and not mov_seg_path.is_dir()):
         sys.exit("\nWhen specifying a directory as input, an existing directory must also be passed for the moving segmentations.")
-    if (out_img_path.suffix != '') \
+    if (out_img_path.suffix != '' if out_img_path is not None else False) \
         or (out_seg_path.suffix != '' if out_seg_path is not None else False) \
         or (out_transfo_path.suffix != '' if out_transfo_path is not None else False) \
         or (out_transfo_polaffini_aff_path.suffix != '' if out_transfo_polaffini_aff_path is not None else False) \
@@ -73,14 +70,14 @@ if mov_img_path.is_dir():
 
 print('\nLoading model...')
 
-if args.ref == "mni2":
-    args.ref = os.path.join(maindir, 'refs', 'mni_t1_2mm.nii.gz')
-elif args.ref_seg == "mni1":
-    args.ref_seg = os.path.join(maindir, 'refs', 'mni_t1.nii.gz')
+if args.ref_img == "mni2":
+    ref_img_path = pathlib.Path(os.path.join(maindir, 'refs', 'mni_t1_2mm.nii.gz'))
+elif args.ref_img == "mni1":
+    ref_img_path = pathlib.Path(os.path.join(maindir, 'refs', 'mni_t1.nii.gz'))
 if args.ref_seg == "mni2":
-    args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt_2mm.nii.gz')
+    ref_seg_path = pathlib.Path(os.path.join(maindir, 'refs', 'mni_dkt_2mm.nii.gz'))
 elif args.ref_seg == "mni1":
-    args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt.nii.gz')
+    ref_seg_path = pathlib.Path(os.path.join(maindir, 'refs', 'mni_dkt.nii.gz'))
 
 
 model = dwarp.networks.diffeo_pair_seg.load(args.model)
@@ -88,8 +85,12 @@ model = dwarp.networks.diffeo_pair_seg.load(args.model)
 inshape = model.output_shape[0][1:-1]
 size = inshape[::-1]
 ndims = len(inshape)
-vox_sz = np.asmatrix(model.config.params['vox_sz'])
+vox_sz = np.array(model.config.params['vox_sz'])
 
+ref_img_names = ref_img_path.name
+ref_img_path = ref_img_path.parent
+ref_seg_names = ref_seg_path.name
+ref_seg_path = ref_seg_path.parent
 if mov_img_path.is_file():
     mov_img_names = [mov_img_path.name]
     mov_img_path = mov_img_path.parent
@@ -115,67 +116,56 @@ else:
     geom.SetSpacing(spacing)
     geom.SetOrigin(origin)
 
-
+ref_img_file = ref_img_path.joinpath(ref_img_names)
+ref_seg_file = ref_seg_path.joinpath(ref_seg_names)
+print(f"target: - img: {ref_img_names}")
+print(f"        - seg: {ref_img_names}")
 for i in range(len(mov_img_names)):
     
     print(f"\nRegistration {i+1}/{len(mov_img_names)}")
     print(f"moving: - img: {mov_img_names[i]}")
     print(f"        - seg: {mov_seg_names[i]}")
-    print(f"target: - img: {args.ref_img}")
-    print(f"        - seg: {args.ref_seg}")
-    
+
     transfo_full = sitk.CompositeTransform(ndims)
     
     mov_img_file = mov_img_path.joinpath(mov_img_names[i])
-    mov_seg_file = mov_img_path.joinpath(mov_seg_names[i])
-    gen_test = dwarp.generators.pair_polaffini(mov_files=[mov_img_file, args.ref_img], 
-                                               mov_seg_files=[mov_seg_file, args.ref_img],
+    mov_seg_file = mov_seg_path.joinpath(mov_seg_names[i])
+    moving = sitk.ReadImage(mov_img_file)
+    moving_seg = sitk.ReadImage(mov_seg_file)
+    
+    gen_test = dwarp.generators.pair_polaffini(mov_files=[mov_img_file,ref_img_file], 
+                                               mov_seg_files=[mov_seg_file,ref_seg_file],
                                                vox_sz=vox_sz,
                                                grid_sz=inshape,
                                                polaffini_sigma=args.sigma,
                                                polaffini_downf=args.down_factor,
                                                polaffini_omit_labs=args.omit_labs,
-                                               mov_ref_pair=True)
+                                               mov_ref_pair=True,
+                                               get_matO=True)
+    mov, ref, _, _, matO = next(gen_test)[0]
+    origin, spacing, direction = utils.decomp_matOrientation(matO[0])
 
 
-    mov = sitk.GetArrayFromImage(mov)[np.newaxis,..., np.newaxis]
+    print('Registering through model...')
+    _, _, field, _, svf = model.register(mov, ref)
 
-    resampler = sitk.ResampleImageFilter()
-    resampler.SetOutputOrigin(origin)
-    resampler.SetOutputSpacing(spacing)
-    resampler.SetOutputDirection(direction)
-    resampler.SetSize(size)
-    resampler.SetInterpolator(sitk.sitkLinear)
+
+    print('Composing transformations...')
+    field = utils.get_real_field(field, matO[0])
+    field = sitk.GetImageFromArray(field[0, ...], isVector=True)
+    field.SetDirection(direction)
+    field.SetSpacing(spacing)
+    field.SetOrigin(origin)
+    field = sitk.DisplacementFieldTransform(field)
+    transfo_full.AddTransform(field)
     
-    svf_all = []
-    for p in range(args.nb_passes):
-        print('Registering through model...')
-        _, field, svf = model.register(mov)
-
-        print('Composing transformations...')
-        field = utils.get_real_field(field, matO)
-        field = sitk.GetImageFromArray(field[0, ...], isVector=True)
-        field.SetDirection(direction)
-        field.SetSpacing(spacing)
-        field.SetOrigin(origin)
-        field = sitk.DisplacementFieldTransform(field)
-        transfo_full.AddTransform(field)
+    if args.out_svf is not None:
+        svf = utils.get_real_field(svf, matO)
+        svf = sitk.GetImageFromArray(svf[0, ...], isVector=True)
+        svf.SetDirection(direction)
+        svf.SetSpacing(spacing)
+        svf.SetOrigin(origin)
         
-        if args.out_svf is not None:
-            svf = utils.get_real_field(svf, matO)
-            svf = sitk.GetImageFromArray(svf[0, ...], isVector=True)
-            svf.SetDirection(direction)
-            svf.SetSpacing(spacing)
-            svf.SetOrigin(origin)
-            svf_all += [svf]
-
-        if p+1 < args.nb_passes:
-            resampler.SetTransform(transfo_full)
-            mov = resampler.Execute(moving)
-            mov = utils.resample_image(mov, size, matO, sitk.sitkLinear)
-            mov = utils.normalize_intensities(mov)
-            mov = sitk.GetArrayFromImage(mov)[np.newaxis,..., np.newaxis]
-
 
     print('Resampling...')
     resampler = sitk.ResampleImageFilter()

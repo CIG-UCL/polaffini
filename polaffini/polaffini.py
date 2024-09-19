@@ -52,6 +52,7 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
     """
     
     sigma = float(sigma)
+    omit_labs = np.array(omit_labs)
     
     ref_seg = sitk.Cast(ref_seg, sitk.sitkInt64)
     ndims = ref_seg.GetDimension()
@@ -239,7 +240,7 @@ def write_dispField(transfo, out_file, ref_image=None):
 
 def get_common_labels(seg_img1, seg_img2, omit_labs=[]):
     
-    omit_labs += [0]
+    omit_labs = np.append(omit_labs, 0)
     labs1 = np.unique(sitk.GetArrayFromImage(seg_img1))
     labs2 = np.unique(sitk.GetArrayFromImage(seg_img2))
     for l in omit_labs:

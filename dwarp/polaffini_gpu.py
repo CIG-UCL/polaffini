@@ -44,6 +44,7 @@ def estimateTransfo(mov_seg, ref_seg,
     """
     
     sigma = float(sigma)
+    omit_labs = np.array(omit_labs)
     
     ndims = ref_seg.GetDimension()
     ref_seg_down = sitk.Shrink(ref_seg, [int(down_factor)]*ndims)    
@@ -152,9 +153,9 @@ def estimateTransfo(mov_seg, ref_seg,
  
 
 
-def get_common_labels(seg1, seg2, omit_labs=[]): # DONE
+def get_common_labels(seg1, seg2, omit_labs=[]):
     
-    omit_labs += [0]
+    omit_labs = np.append(omit_labs, 0)
     
     seg1 = tf.cast(seg1, dtype=tf.int32)
     seg2 = tf.cast(seg2, dtype=tf.int32)
