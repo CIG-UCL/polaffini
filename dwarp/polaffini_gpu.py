@@ -188,8 +188,13 @@ def get_label_stats(seg, matO, spacing, labs, get_centroids=True, get_volumes=Fa
 
         if get_centroids:
             centroid = tf.reduce_mean(tf.cast(lab_coords, tf.float32), axis=0)
-            print(lab, centroid)
             centroids.append(centroid)
+            if centroid.shape != 3:
+                print('----------------------------------')
+                tf.print(lab_coords.shape)
+                tf.print(lab, centroid)
+                print('----------------------------------')
+                break
 
         if get_volumes:
             volumes.append(tf.shape(lab_coords)[0])
