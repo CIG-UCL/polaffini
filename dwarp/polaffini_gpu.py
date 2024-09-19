@@ -136,6 +136,7 @@ def estimateTransfo(mov_seg, ref_seg,
                 print("Mult SVF error:", e)
                 print("Local variables:", locals())
                 print("global variables:", globals())
+                sys.exit(0)
             weight_map_sum += weight_map
 
         weight_map_sum += weight_bg*sigma*tf.sqrt(2*np.pi)
@@ -165,8 +166,7 @@ def get_common_labels(seg1, seg2, omit_labs=[]):
     seg2 = tf.cast(seg2, dtype=tf.int32)
     labs1, _ = tf.unique(tf.reshape(seg1,(-1)))
     labs2, _ = tf.unique(tf.reshape(seg2,(-1)))
-    print(labs1)
-    print(labs2)
+
     for l in omit_labs:
         labs1 = labs1[labs1 != l]
         labs2 = labs2[labs2 != l]
@@ -181,7 +181,6 @@ def get_label_stats(seg, matO, spacing, labs, get_centroids=True, get_volumes=Fa
     
     centroids = [] if get_centroids else None
     volumes = [] if get_volumes else None
-    print(labs)
     
     for lab in labs:
 
@@ -209,6 +208,7 @@ def get_label_stats(seg, matO, spacing, labs, get_centroids=True, get_volumes=Fa
             print("Centroid error:", e)
             print("Local variables:", locals())
             print("global variables:", globals())
+            sys.exit(0)
         centroids = tf.concat([centroids, tf.ones((1, len(labs)), dtype=tf.float32)], axis=0)
         centroids = tf.matmul(tf.cast(matO, tf.float32), centroids)[:-1, :]
         
