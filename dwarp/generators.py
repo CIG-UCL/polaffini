@@ -315,11 +315,7 @@ def pair_polaffini(mov_files,
                 i, j = 1, 0
             else:
                 i, j = np.random.choice(range(len(mov_files)), size=2, replace=False)
-            print('\n-')
-            print(mov_files[i])
-            print(mov_seg_files[i])
-            print(mov_files[j])
-            print(mov_seg_files[j])
+
             ref_img = sitk.ReadImage(mov_files[i])
             ref_seg = sitk.ReadImage(mov_seg_files[i])
             mask = sitk.BinaryThreshold(ref_seg, 1, 23) + sitk.BinaryThreshold(ref_seg, 25, 1e9)

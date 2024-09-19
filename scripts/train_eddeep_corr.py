@@ -176,8 +176,6 @@ else:
 
 ytrans = [translator(sample[0]), translator(sample[1])]
 
-epochs = 1000
-    
 for epoch in range(initial_epoch, args.epochs):   
     t = time.time()
     

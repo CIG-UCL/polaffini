@@ -164,9 +164,6 @@ tf.keras.utils.plot_model(gan, to_file=args.model + '_gan_plot.png', show_shapes
 n_train_steps = n_train // args.batch_size
 if is_val:
     n_val_steps = n_val // args.batch_size
-    monitor='val_loss'
-else:
-    monitor='loss'
 
 patch_shape = discriminator.layers[-1].output_shape[1:-1]
 real = tf.ones((args.batch_size, *patch_shape, 1))
