@@ -24,7 +24,8 @@ parser = argparse.ArgumentParser(description="Training script for dwarp diffeomo
 parser.add_argument('-t', '--train_data', type=str, required=True, help='Path to the training data initialized using pretrain script (should be the same as the -o from pretrain script).')
 parser.add_argument('-v', '--val_data', type=str, required=False, default=None, help='Path to the validation data initialized using pretrain script (should be the same as the -o from pretrain script).')
 parser.add_argument('-s', '--use-seg', type=int, required=False, default=0, help='Use segmentations at training (1: yes, 0: no). Default: 0.')
-parser.add_argument('-ohot', '--ohot', type=int, required=False, default=0, help='Segmentations are one-hot encoded (1: yes, 0: no). Default: 0.')
+parser.add_argument('-lab', '--labels', type=str, required=False, default=None, help="Path to the file containing the label numbers (1 line csv file) or 'dkt' for DKT labels. Default: unique labels of the first segmentation.")
+parser.add_argument('-omit-slabs', '--omit_slabs', type=int, nargs='+', required=False, default=[], help='List of labels to omit for the segmentation overlap loss. Default: []. Example: 2 24 41. 0 (background) is always omitted.')
 # model and its hyper-paramaters
 parser.add_argument('-o', '--model', type=str, required=True, help="Path to the output model (.h5).")
 parser.add_argument('-lr', '--learning-rate', type=float, required=False, default=1e-4, help="Learning rate. Default: 1e-4.")
@@ -37,16 +38,14 @@ parser.add_argument('-l', '--loss', type=str, required=False, default='nlcc', he
 parser.add_argument('-ls', '--loss-seg', type=str, required=False, default='dice', help="Segmentation-based overlap loss: 'dice' or other to be added. Default: 'dice'")
 parser.add_argument('-lw', '--loss-win', type=int, required=False, default=5, help="Window diameter (in voxels) for local losses (nlcc). Default: 5")
 parser.add_argument('-wi', '--weight-img-loss', type=float, required=False, default=1, help="Weight for the image loss. Default: 1.")
-parser.add_argument('-ws', '--weight-seg-loss', type=float, required=False, default=0.01, help="Weight for the segmentation loss. Default: 0.01.")
+parser.add_argument('-ws', '--weight-seg-loss', type=float, required=False, default=0.1, help="Weight for the segmentation loss. Default: 0.01.")
 parser.add_argument('-wr', '--weight-reg-loss', type=float, required=False, default=1, help="Weight for the regularization loss. Default: 1.")
-parser.add_argument('-omit_labs','--omit-labs', type=int, nargs='+', required=False, default=[], help='List of labels to omit for Dice. Default: []. 0 (background) is always omitted.')
 # other
 parser.add_argument('-r', '--resume', type=int, required=False, default=0, help='Resume a traning that stopped for some reason (1: yes, 0: no). Default: 0.')
 parser.add_argument('-seed', '--seed', type=int, required=False, default=None, help='Seed for random. Default: None.')
 
 args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
 args.use_seg = bool(args.use_seg)
-args.ohot = bool(args.ohot)
 args.resume = bool(args.resume)
 
 if args.seed is not None:
@@ -79,7 +78,6 @@ gen_train = generators.mov2atlas_initialized(mov_files = mov_files,
                                              ref_file = ref_file,
                                              mov_seg_files = mov_seg_files,
                                              ref_seg_file = ref_seg_file,
-                                             one_hot=args.ohot,
                                              batch_size = args.batch_size)
 n_train = len(mov_files)
 
@@ -96,7 +94,6 @@ else:
                                                ref_file = ref_file,
                                                mov_seg_files = mov_seg_files_val,
                                                ref_seg_file = ref_seg_file,
-                                               one_hot=args.ohot,
                                                batch_size = args.batch_size)
     n_val = len(mov_files_val)
     sample = next(gen_val)
@@ -110,19 +107,23 @@ inshape = sample[0][0].shape[1:-1]
 nfeats = sample[0][0].shape[-1]
 nb_labs = None
 if args.use_seg:
-    nb_labs = sample[0][1].shape[-1]
-    if args.ohot:
-        labels = None
-    else:
+    if args.labels is None:
         labels = np.unique(sample[1][1])
-        labels = np.delete(labels, labels==0)
-        for l in args.omit_labs:
-            labels = np.delete(labels, labels==l)
-        
+    elif args.labels == 'dkt':
+        labels = np.array(generators.get_labels('dkt'))
+    else:
+        with open(args.labels, 'r') as file:
+            labels = file.readline().strip().split(',')
+        labels = np.array([int(l) for l in labels])
+    for l in args.omit_slabs + [0]:
+        labels = np.delete(labels, labels==l)     
+    nb_labs = len(labels)
+
+     
 #%% Prepare and build the model
 
 if args.loss == 'nlcc':
-    # losses = [dwarp.losses.wLCC(win=args.loss_win).loss]
+
     losses = [voxelmorph.losses.NCC(win=args.loss_win).loss]
 elif args.loss == 'mse':
     losses = [dwarp.losses.wMSE().loss]
@@ -131,7 +132,7 @@ else:
 loss_weights = [args.weight_img_loss]
 
 if args.use_seg:
-    losses += [dwarp.losses.Dice(is_onehot=args.ohot, labels=labels).loss]
+    losses += [dwarp.losses.Dice(is_onehot=False, labels=labels).loss]
     loss_weights += [args.weight_seg_loss]
     
 losses += [voxelmorph.losses.Grad('l2', loss_mult=1).loss]
@@ -153,7 +154,7 @@ else:
                                         nb_enc_features=args.enc_nf,
                                         nb_dec_features=args.dec_nf,
                                         src_feats=nfeats,
-                                        nb_labs = nb_labs,
+                                        is_seg = args.use_seg,
                                         int_steps=7)
     initial_epoch = 0
   

@@ -51,9 +51,14 @@ def shift_to_transfo(loc_shift, indexing='ij'):
     return mesh + loc_shift
 
 
-def plot_losses(loss_file, is_val=False, write=True, suptitle=''):
+def plot_losses(loss_file, is_val=False, write=True,
+                suptitle='', reord_ind=None):
 
     tab_loss = pd.read_csv(loss_file, sep=',')
+    if reord_ind is not None:
+        reord_cols = tab_loss.columns[reord_ind]
+        tab_loss = tab_loss[reord_cols]
+    
     nb_losses = len(tab_loss.columns) - 1
     if is_val:
         nb_losses = int(nb_losses / 2)

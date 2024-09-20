@@ -151,7 +151,7 @@ class diffeo2atlas(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDens
     @ne.modelio.store_config_args
     def __init__(self,
                  inshape,
-                 nb_labs=None,
+                 is_seg=False,
                  is_aux=False,  # -> is there auxiliary images (e.g. FA maps).
                  orientation=None,
                  nb_enc_features=[16, 32, 32, 32, 32],
@@ -175,10 +175,7 @@ class diffeo2atlas(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDens
             input_model: Model to replace default input layer before concatenation. Default is None.
             name: Model name - also used as layer name prefix. Default is 'aff2atlas'.
         """
-        is_seg = False
-        if nb_labs is not None:
-            is_seg = True    # -> there is auxiliary segmentation
-                        
+            
         # ensure correct dimensionality
         ndims = len(inshape)
         assert ndims in [2, 3], 'ndims should be one of 2, or 3. found: %d' % ndims
@@ -212,7 +209,7 @@ class diffeo2atlas(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDens
         outputs = [moved]
 
         if is_seg:
-            moving_seg = tf.keras.Input(shape=(*inshape, nb_labs), name='%s_moving_seg_input' % name)  #, dtype='bool')
+            moving_seg = tf.keras.Input(shape=(*inshape, src_feats), name='%s_moving_seg_input' % name) 
             inputs = inputs + [moving_seg]
             moved_seg = voxelmorph.layers.SpatialTransformer(interp_method='nearest', indexing='ij', name='resampler_seg')([moving_seg, transfo])  
             dummy_layer = KL.Lambda(lambda x: x, name='seg')

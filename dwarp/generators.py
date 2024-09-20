@@ -131,7 +131,7 @@ def mov2atlas_initialized(mov_files,
                           mov_seg_files=None,
                           ref_seg_file=None,
                           weight_file=None,
-                          one_hot=True,
+                          one_hot=False,
                           dtype=np.float32,
                           batch_size=1):
     """
