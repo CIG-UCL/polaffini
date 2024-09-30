@@ -126,32 +126,37 @@ class wLCC:  # extension of VoxelMorph LCC loss from dev branch (not main!!)
         return 1 - cc
             
     
-class Dice: # from VoxelMorph but modified for better div_no_nan handling
+class Dice: 
     """
     N-D dice for segmentation
     """
     
-    def __init__(self, is_onehot=True, labels=None):
+    def __init__(self, is_onehot=False, labels=None):
         self.is_onehot = is_onehot
         self.labels = labels
         
     def loss(self, y_true, y_pred):
+
+        dices = self.dices(y_true, y_pred)
+        return -tf.reduce_mean(dices)
+    
+    def dices(self, y_true, y_pred):
+
+        if self.is_onehot:
+            dices = self.dice(y_true, y_pred)
+        else:
+            dices = []
+            for l in self.labels:
+                y_true_l = tf.cast(y_true == l, tf.float32)
+                y_pred_l = tf.cast(y_pred == l, tf.float32)           
+                dices += [self.dice(y_true_l, y_pred_l, l)]
+        
+        return dices
+        
+    def dice(self, y_true, y_pred, l): 
         
         ndims = len(y_pred.get_shape().as_list()) - 2
         vol_axes = list(range(1, ndims + 1))
-    
-        if self.is_onehot:
-            dice = self.dice(y_true, y_pred, vol_axes)
-        else:
-            dice = []
-            for l in self.labels:
-                y_true_l = tf.cast(y_true == l, tf.uint16)
-                y_pred_l = tf.cast(y_pred == l, tf.uint16)           
-                dice += [self.dice(y_true_l, y_pred_l, vol_axes)]
-            
-        return -tf.reduce_mean(dice)
-     
-    def dice(self, y_true, y_pred, vol_axes):
         
         top = 2 * tf.reduce_sum(y_true * y_pred, vol_axes)
         bottom = tf.reduce_sum(y_true + y_pred, vol_axes)
@@ -160,7 +165,7 @@ class Dice: # from VoxelMorph but modified for better div_no_nan handling
             tf.math, 'divide_no_nan') else tf.div_no_nan  
         dice = div_no_nan(top, bottom)
         
-        return dice
+        return tf.squeeze(dice)
         
         
         

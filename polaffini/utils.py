@@ -4,10 +4,11 @@ import os
 import pathlib
 import tempfile
 import nibabel as nib
+import copy
+from scipy.linalg import logm, expm
 
 class imageIO:
-    # SimpleITK is preferred to nibabel as the former has shown to be more reliable for orientation matrices.
-    # Although, conversion with nibabel is proposed for formats not supported by SimpleITK.
+    # SimpleITK is preferred to nibabel but the latter is used for freesurfer formats.
     
     def __init__(self, filename, convertvia='nii', tmpdir=None):
         self.convertvia = convertvia
@@ -54,7 +55,7 @@ class imageIO:
     def _splitext(self):     
         filename, ext = os.path.splitext(self.filename)
         if ext == '.gz':
-            filename, ext = os.path.splitext(self.filename)
+            filename, ext = os.path.splitext(filename)
             ext = ext + '.gz'       
         return filename, ext
     
@@ -109,22 +110,28 @@ def one_hot_enc(seg, labs, segtype='itkimg', dtype=np.int8):
     return seg
 
 
-def get_matOrientation(img, decomp=False):
-    
+def get_matOrientation(img, indexing='itk'):
+    # CAREFUL: 
+    # It's from itk indices to physical space by default.
+    # For numpy indices to physical space, use indexing='numpy'.
+
     ndims = img.GetDimension() 
     origin = img.GetOrigin()
     spacing = img.GetSpacing()
     direction = img.GetDirection()
     
-    if decomp:
-        return (origin, spacing, direction)
+    perm = np.eye(ndims+1)
+    if indexing == 'numpy':
+        perm[:ndims,:ndims] = np.eye(ndims)[::-1]
     
-    else:
-        matO = np.matmul(np.reshape(direction,(ndims, ndims)), np.diag(spacing))
-        matO = np.concatenate((matO, np.reshape(origin, (ndims,1))), axis=1)
-        matO = np.concatenate((matO, np.reshape([0]*ndims+[1], (1,ndims+1))), axis=0)
-        return matO
+    matO = np.matmul(np.reshape(direction,(ndims, ndims)), np.diag(spacing))
+    matO = np.concatenate((matO, np.reshape(origin, (ndims,1))), axis=1)
+    matO = np.concatenate((matO, np.reshape([0]*ndims+[1], (1,ndims+1))), axis=0)
+    matO = np.matmul(matO, perm)
+
+    return matO
   
+
     
 def decomp_matOrientation(matO):
     """
@@ -255,7 +262,7 @@ def change_img_size(img, grid_sz=[96,128,96]):
 def get_real_field(field, matO, nobatch=False):
     """
     Compute the real coordinates affine transformation based on
-        - A deformation field in voxelic coordinates. (nb,nx,ny,nz,3)
+        - A deformation field (ND-array) in voxelic coordinates. (nb,nx,ny,nz,3)
         - An orientation matrix.
     """
     
@@ -266,9 +273,140 @@ def get_real_field(field, matO, nobatch=False):
         
     field = np.expand_dims(field, -1)
     linearPartO = np.expand_dims(matO[:-1,:-1], list(range(extdims+1))) 
-    perm = np.expand_dims(np.eye(ndims)[::-1], list(range(extdims+1))) # permut dimensions from voxelmorph to itk
+    perm = np.expand_dims(np.eye(ndims)[::-1], list(range(extdims+1))) # permut dimensions from numpy to itk
     
     field_real = np.matmul(linearPartO, np.matmul(perm,field))     
     
     return field_real[..., 0]
+
+
+def aff_tr2mat(aff_tr):
     
+    ndims = aff_tr.GetDimension()
+    aff_mat = np.reshape(aff_tr.GetParameters()[:-ndims], (ndims,ndims))
+    aff_mat = np.c_[aff_mat, aff_tr.GetParameters()[ndims**2:]]
+    aff_mat = np.r_[aff_mat, np.reshape([0]*ndims+[1], (1,ndims+1))]
+    
+    return aff_mat
+    
+
+def aff_mat2tr(aff_mat):
+    
+    ndims = aff_mat.shape[1]-1
+    aff_tr = sitk.AffineTransform(ndims)
+    aff_tr.SetMatrix(np.ravel(aff_mat[:ndims,:ndims] + np.eye(ndims)))
+    aff_tr.SetTranslation(aff_mat[:ndims,ndims])
+    
+    return aff_tr
+
+    
+def aff_tr2field(aff_tr, 
+                 geom_img=None, 
+                 size=None, origin=None, direction=None, spacing=None):
+    
+    if geom_img is not None:        
+        size = geom_img.GetSize()
+        origin = geom_img.GetOrigin()
+        direction = geom_img.GetDirection()
+        spacing = geom_img.GetSpacing()
+            
+    trsf2disp = sitk.TransformToDisplacementFieldFilter()
+    trsf2disp.SetSize(size)
+    trsf2disp.SetOutputOrigin(origin)
+    trsf2disp.SetOutputDirection(direction)
+    trsf2disp.SetOutputSpacing(spacing)
+    
+    return trsf2disp.Execute(aff_tr)
+    
+
+def integrate_svf(svf, int_steps=7, out_tr=True, alpha=1):
+    
+    ndims = svf.GetDimension()
+    
+    if alpha != 1:
+        svf = sitk.Compose([sitk.VectorIndexSelectionCast(svf, d) * alpha for d in range(ndims)])
+        
+    # scaling
+    svf = sitk.Compose([sitk.VectorIndexSelectionCast(svf, d)/(2**int_steps) for d in range(ndims)])
+
+    # squaring
+    resampler = sitk.ResampleImageFilter()
+    resampler.SetInterpolator(sitk.sitkLinear)
+    resampler.SetUseNearestNeighborExtrapolator(True)
+    resampler.SetReferenceImage(svf)
+    for _ in range(int_steps): 
+        svf0 = copy.deepcopy(svf)
+        transfo = sitk.DisplacementFieldTransform(svf)    
+        resampler.SetTransform(transfo)
+        svf = svf0 + resampler.Execute(svf0)
+    
+    if out_tr:
+        return sitk.DisplacementFieldTransform(svf)
+    else:
+        return svf
+
+
+def jacobian(disp):   # TODO: add identity option !!
+    
+    ndims = disp.GetDimension()
+    size = disp.GetSize()
+    volshape = size[::-1]
+    origin = disp.GetOrigin()
+    direction = disp.GetDirection()
+    spacing = disp.GetSpacing()
+    
+    disp = [sitk.VectorIndexSelectionCast(disp, i) for i in range(ndims)]
+    
+    grad_filter = sitk.GradientImageFilter()
+    grad_filter.UseImageDirectionOn()
+    grad_filter.UseImageSpacingOn()
+    grad = [grad_filter.Execute(d) for d in disp]
+
+    jacob = np.zeros((*volshape, ndims, ndims))  
+    for i in range(ndims):
+        grad_i = [sitk.VectorIndexSelectionCast(grad[i], j) for j in range(ndims)]
+        for j in range(ndims):
+            jacob[..., i, j] = sitk.GetArrayFromImage(grad_i[j])
+    jacob = np.reshape(jacob, (*volshape, ndims**2))
+    
+    jacob = sitk.GetImageFromArray(jacob)
+    jacob.SetOrigin(origin)
+    jacob.SetDirection(direction)
+    jacob.SetSpacing(spacing)    
+        
+    return jacob
+
+
+def bch(svf1_img, svf2_img, order=2):
+    """
+    svf1 and sv2 are assumed to have same size, orientation, spacing, origin.
+    """
+    
+    ndims = svf1_img.GetDimension()
+    size = svf1_img.GetSize()
+    volshape = size[::-1]
+    
+    compo_svf_img = svf1_img  + svf2_img   
+    
+    if order > 1: 
+        svf1 = sitk.GetArrayFromImage(svf1_img)
+        svf1 = np.reshape(svf1, (*volshape, ndims, 1))
+        svf1_jac = jacobian(svf1_img)
+        svf1_jac = sitk.GetArrayFromImage(svf1_jac)
+        svf1_jac = np.reshape(svf1_jac, (*volshape, ndims, ndims))
+        
+        svf2 = sitk.GetArrayFromImage(svf2_img)
+        svf2 = np.reshape(svf2, (*volshape, ndims, 1))
+        svf2_jac = jacobian(svf2_img)
+        svf2_jac = sitk.GetArrayFromImage(svf2_jac)
+        svf2_jac = np.reshape(svf2_jac, (*volshape, ndims, ndims))
+        
+        lie_bracket = np.matmul(svf1_jac, svf2) - np.matmul(svf2_jac, svf1)
+        lie_bracket = np.reshape(lie_bracket, (*volshape, ndims))
+        lie_bracket /= 2
+        lie_bracket_img = sitk.GetImageFromArray(lie_bracket, isVector=True)
+        lie_bracket_img.CopyInformation(svf1_img)
+    
+        compo_svf_img += lie_bracket_img
+        
+    return compo_svf_img

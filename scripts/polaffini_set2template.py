@@ -24,7 +24,7 @@ parser.add_argument('-o', '--out-dir', type=str, required=True, help='Path to ou
 parser.add_argument('-ot', '--out-transfo', type=int, required=False, default=0, help='Also output transformations (1:yes, 0:no). Default: 0.')
 parser.add_argument('-os', '--out-seg', type=int, required=False, default=0, help='Also output moved segmentations (1:yes, 0:no). Default: 0.')
 parser.add_argument('-oa', '--out-aux', type=int, required=False, default=0, help='Also output moved auxiliary images (1:yes, 0:no). Default: 0.')
-parser.add_argument('-ohot', '--one-hot', type=int, required=False, default=1, help='Perform one-hot encoding on moved output segmentations (1:yes, 0:no). Default: 1.')
+parser.add_argument('-ohot', '--one-hot', type=int, required=False, default=0, help='Perform one-hot encoding on moved output segmentations (1:yes, 0:no). Default: 1.')
 parser.add_argument('-mask', '--mask', type=int, required=False, default=1, help='Perform masking using all labels except 24 (1:yes, 0:no). Default: 1.')
 parser.add_argument('-kpad', '--k-padding', type=int, required=False, default=5, help='Pad an image such that image size along each dimension  is a multiple of 2^k (k must be greater than the number of contracting levels). Default: 5.')
 parser.add_argument('-ext', '--ext', type=str, required=False, default='.nii.gz', help="Extension of output images. Default: '.nii.gz'.")
@@ -124,10 +124,10 @@ def init_polaffini_set(mov_files,
 
 if args.ref_seg == "mni2" or args.ref_img == "mni2":
     args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt_2mm.nii.gz')
-    args.ref_img = os.path.join(maindir, 'refs', 'mni_brain_2mm.nii.gz')
+    args.ref_img = os.path.join(maindir, 'refs', 'mni_t1_2mm.nii.gz')
 elif args.ref_seg == "mni1" or args.ref_img == "mni1":
     args.ref_seg = os.path.join(maindir, 'refs', 'mni_dkt.nii.gz')
-    args.ref_img = os.path.join(maindir, 'refs', 'mni_brain.nii.gz')  
+    args.ref_img = os.path.join(maindir, 'refs', 'mni_t1.nii.gz')  
     
 os.makedirs(os.path.join(args.out_dir), exist_ok=True)
 os.makedirs(os.path.join(args.out_dir, 'img'), exist_ok=True)
