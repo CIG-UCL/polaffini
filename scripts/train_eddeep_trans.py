@@ -76,12 +76,12 @@ sub_dirs = sorted(glob.glob(os.path.join(args.train_data, '*', '')))
 random.shuffle(sub_dirs)
 
 gen_train = eddeep.generators.eddeep_fromDWI(subdirs=sub_dirs,
-                                            k=args.kpad,
-                                            target_bval = args.target_bval,
-                                            get_dwmean = True,
-                                            spat_aug_prob = args.aug_spat_prob,
-                                            int_pair_aug_prob = args.aug_int_prob,
-                                            batch_size=args.batch_size)
+                                             k=args.kpad,
+                                             target_bval = args.target_bval,
+                                             get_dwmean = True,
+                                             spat_aug_prob = args.aug_spat_prob,
+                                             int_pair_aug_prob = args.aug_int_prob,
+                                             batch_size=args.batch_size)
 
 n_train = len(sub_dirs)
 
@@ -90,14 +90,14 @@ if not is_val:
     gen_val = None
     sample = next(gen_train)
 else:
-    sub_dirs_val = sorted(glob.glob(os.path.join(args.train_data, '*', '')))
+    sub_dirs_val = sorted(glob.glob(os.path.join(args.val_data, '*', '')))
     gen_val = eddeep.generators.eddeep_fromDWI(subdirs=sub_dirs_val,                                                          
-                                              k=len(args.gen_enc_nf),
-                                              target_bval = args.target_bval,
-                                              get_dwmean = True,
-                                              spat_aug_prob = 0,
-                                              int_pair_aug_prob = 0,
-                                              batch_size=args.batch_size)
+                                               k=args.kpad,
+                                               target_bval = args.target_bval,
+                                               get_dwmean = True,
+                                               spat_aug_prob = 0,
+                                               int_pair_aug_prob = 0,
+                                               batch_size=args.batch_size)
     n_val = len(sub_dirs_val)
     sample = next(gen_val)
     
@@ -134,10 +134,10 @@ else:
     discriminator = eddeep.networks.pix2pix_dis(inshape,
                                                nb_feats=args.dis_enc_nf)   
     generator = eddeep.networks.pix2pix_gen(volshape=inshape,
-                                           nb_enc_features=args.gen_enc_nf,
-                                           nb_dec_features=args.gen_dec_nf + [1],
-                                           final_activation=None,
-                                           name='gen')
+                                            nb_enc_features=args.gen_enc_nf,
+                                            nb_dec_features=args.gen_dec_nf + [1],
+                                            final_activation=None,
+                                            name='gen')
     initial_epoch = 0
     try:
         os.remove(loss_file)
@@ -273,7 +273,7 @@ for epoch in range(initial_epoch, args.epochs):
     y0_fake = generator.predict(sample[0], verbose=0)
     y_fake = generator.predict(sample[1], verbose=0)
     
-    f, axs = plt.subplots(2,5); f.dpi = 200
+    f, axs = plt.subplots(2,5); f.dpi = 500
     plt.subplots_adjust(wspace=0.01,hspace=-0.58)
     
     axs[0][0].imshow(np.fliplr(sample[0][0,:,:,sl_sag,0]), vmin=0, vmax=0.5, origin="lower")
@@ -300,7 +300,7 @@ for epoch in range(initial_epoch, args.epochs):
     
     plt.suptitle('epoch: ' + str(epoch+1), ha='center', y=0.8, fontsize=8)
 
-    plt.savefig(os.path.join(args.model + '_imgs','img_' + str(epoch) + '.png'), bbox_inches='tight')
+    plt.savefig(os.path.join(args.model + '_imgs','img_' + str(epoch) + '.png'), bbox_inches='tight',dpi=300)
     plt.close()
 
 dwarp.utils.plot_losses(loss_file, is_val=is_val)

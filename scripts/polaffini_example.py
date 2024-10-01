@@ -25,7 +25,7 @@ target_seg = utils.imageIO(target_seg_file).read()
 t = time.time()
 init_aff, polyAff_svf = polaffini.estimateTransfo(moving_seg, 
                                                   target_seg, 
-                                                  omit_labs=[2,41])
+                                                  omit_labs=[24,2,41])
 print("POLAFFINI estimation done in " + str(round(time.time()-t,3)) + " seconds.")
 
 # Composition to the full transformation (moving to target)

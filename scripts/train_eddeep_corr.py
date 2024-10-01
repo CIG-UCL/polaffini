@@ -80,10 +80,10 @@ sub_dirs = sorted(glob.glob(os.path.join(args.train_data, '*', '')))
 random.shuffle(sub_dirs)
 
 gen_train = eddeep.generators.eddeep_fromDWI(subdirs=sub_dirs,
-                                            k=args.kpad,
-                                            spat_aug_prob = args.aug_spat_prob,
-                                            aug_dire = args.ped,
-                                            batch_size=args.batch_size)
+                                             k=args.kpad,
+                                             spat_aug_prob = args.aug_spat_prob,
+                                             aug_dire = args.ped,
+                                             batch_size=args.batch_size)
 
 n_train = len(sub_dirs)
 
@@ -92,11 +92,11 @@ if not is_val:
     gen_val = None
     sample = next(gen_train)
 else:
-    sub_dirs_val = sorted(glob.glob(os.path.join(args.train_data, '*', '')))
+    sub_dirs_val = sorted(glob.glob(os.path.join(args.val_data, '*', '')))
     gen_val = eddeep.generators.eddeep_fromDWI(subdirs=sub_dirs_val,                                                          
-                                              k=len(args.enc_nf),
-                                              spat_aug_prob = 0,
-                                              batch_size=args.batch_size)
+                                               k=args.kpad,
+                                               spat_aug_prob = 0,
+                                               batch_size=args.batch_size)
     n_val = len(sub_dirs_val)
     sample = next(gen_val)
     
@@ -119,7 +119,7 @@ model_path = args.model + '_best.h5'
 model_last_path = args.model + '_last.h5'
 loss_file= args.model + '_losses.csv'
 
-translator = eddep.networks.pix2pix_gen.load(args.trans)
+translator = eddeep.networks.pix2pix_gen.load(args.trans)
 translator.trainable = False 
 
 if args.resume:

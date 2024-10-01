@@ -156,6 +156,7 @@ class diffeo2atlas(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDens
                  orientation=None,
                  nb_enc_features=[16, 32, 32, 32, 32],
                  nb_dec_features=[32, 32, 32, 32, 32, 16, 16],
+                 nb_dec_skip=0,
                  nb_unet_levels=None,
                  unet_feat_mult=1,
                  nb_unet_conv_per_level=1,
@@ -189,6 +190,7 @@ class diffeo2atlas(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDens
                                               nb_features=[nb_enc_features, nb_dec_features],
                                               nb_levels=nb_unet_levels,
                                               feat_mult=unet_feat_mult,
+                                              nb_upsample_skips=nb_dec_skip,
                                               nb_conv_per_level=nb_unet_conv_per_level)
         
         # build diffeo transfo
@@ -196,12 +198,17 @@ class diffeo2atlas(ne.modelio.LoadableModel): # Inspired by voxelmorph's VxmDens
         flow = Conv(ndims, kernel_size=3, padding='same',
                 kernel_initializer=KI.RandomNormal(mean=0.0, stddev=1e-5), name='%s_flow' % name)(unet_model.output)
 
-        ## SVF integration into diffeo
+        # SVF integration into diffeo
         if int_steps > 0:
             transfo = voxelmorph.layers.VecInt(method='ss', name='%s_flow_int' % name, int_steps=int_steps)(flow)
         else:
             transfo = flow
         
+        # resize transfo to full resolution
+        if nb_dec_skip > 0:
+            rescale_factor = 2**nb_dec_skip
+            transfo = voxelmorph.layers.RescaleTransform(rescale_factor, name='%s_rescale' % name)(transfo)
+
         # warp image with diffeomorphic transformation
         moved = voxelmorph.layers.SpatialTransformer(interp_method='linear', indexing='ij', name='resampler')([moving, transfo])
         dummy_layer = KL.Lambda(lambda x: x, name='img')
