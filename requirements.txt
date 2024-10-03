@@ -7,3 +7,4 @@ SimpleITK==2.3.1
 tensorflow[and-cuda]==2.15.1
 voxelmorph==0.2
 nibabel==5.2.0
+pydot==2.0.0
