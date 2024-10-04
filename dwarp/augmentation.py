@@ -124,7 +124,7 @@ class intensity_aug:
     
 class spatial_aug:
     
-    def __init__(self, img_geom, dire=None):
+    def __init__(self, img_geom, dire=None, interp=sitk.sitkLinear):
         self.img_geom = img_geom
         self.ndims = img_geom.GetDimension()
         self.spacing = img_geom.GetSpacing()
@@ -137,12 +137,14 @@ class spatial_aug:
         self.polyaff_params = None
         self.transfo = None
         self.volshape = np.flip(self.size)
+        self.interp = interp
         
     def transform(self, img_list):
         
         resampler = sitk.ResampleImageFilter()
         resampler.SetReferenceImage(self.img_geom)
         resampler.SetTransform(self.transfo)  
+        resampler.SetInterpolator(self.interp)
         img_aug_list = []
         for img in img_list:
             img_aug_list += [resampler.Execute(img)]
