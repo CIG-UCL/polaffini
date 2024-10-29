@@ -31,6 +31,7 @@ parser.add_argument('-o', '--model', type=str, required=True, help="Path to the 
 parser.add_argument('-lr', '--learning-rate', type=float, required=False, default=1e-4, help="Learning rate. Default: 1e-4.")
 parser.add_argument('-enc', '--enc-nf', type=int, nargs='+', required=False, default=[16, 32, 32, 32, 32], help="Number of encoder features. Default: 16 32 32 32 32.")
 parser.add_argument('-dec', '--dec-nf', type=int, nargs='+', required=False, default=[32, 32, 32, 32, 32, 16, 16], help="Number of decoder features. Default: 32 32 32 32 32 16 16.")
+parser.add_argument('-dec-skip', '--nb-dec-skip', type=int, required=False, default=0, help="Number of decoder levels to skip. Default: 0.")
 parser.add_argument('-e', '--epochs', type=int, required=True, help="Number of epochs.")
 parser.add_argument('-b', '--batch-size', type=int, required=False, default=1, help='Batch size. Default: 1.')
 # model losses
@@ -155,6 +156,7 @@ else:
                                         nb_dec_features=args.dec_nf,
                                         src_feats=nfeats,
                                         is_seg = args.use_seg,
+                                        nb_dec_skip=args.nb_dec_skip,
                                         int_steps=7)
     initial_epoch = 0
   

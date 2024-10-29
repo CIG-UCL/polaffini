@@ -52,16 +52,22 @@ def shift_to_transfo(loc_shift, indexing='ij'):
 
 
 def plot_losses(loss_file, is_val=False, write=True,
-                suptitle='', reord_ind=None):
+                suptitle='', reord_ind=None, 
+                ymin=[None], ymax=[None], xmin=[None], xmax=[None]):
 
     tab_loss = pd.read_csv(loss_file, sep=',')
     if reord_ind is not None:
         reord_cols = tab_loss.columns[reord_ind]
         tab_loss = tab_loss[reord_cols]
-    
+
     nb_losses = len(tab_loss.columns) - 1
     if is_val:
         nb_losses = int(nb_losses / 2)
+    
+    if len(xmin) == 1: xmin = xmin * nb_losses
+    if len(xmax) == 1: xmax = xmax * nb_losses
+    if len(ymin) == 1: ymin = ymin * nb_losses
+    if len(ymax) == 1: ymax = ymax * nb_losses
     
     f, axs = plt.subplots(1, nb_losses, figsize=(20,5))
     if nb_losses == 1: axs = [axs]
@@ -76,7 +82,11 @@ def plot_losses(loss_file, is_val=False, write=True,
             axs[l].plot(tab_loss.epoch, tab_loss.loc[:,tab_loss.columns[nb_losses+l+1]], linewidth=0.5, label="validation")
         axs[l].set_title(tab_loss.columns[l+1], fontsize=12)
         axs[l].legend(prop={'size': 10})
-        
+
+        if xmin[l] is not None: axs[l].set_xlim(left=xmin[l])
+        if xmax[l] is not None: axs[l].set_xlim(right=xmax[l])
+        if ymin[l] is not None: axs[l].set_ylim(bottom=ymin[l])    
+        if ymax[l] is not None: axs[l].set_ylim(top=ymax[l])
     plt.tight_layout()
     plt.suptitle(suptitle)
     
