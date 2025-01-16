@@ -30,6 +30,7 @@ label,description,group
 58,Right-Accumbens-area,1
 60,Right-VentralDC,1
 63,Right-choroid-plexus,0
+1001,ctx-lh-bankssts,2
 1002,ctx-lh-caudalanteriorcingulate,2
 1003,ctx-lh-caudalmiddlefrontal,2
 1005,ctx-lh-cuneus,2
@@ -59,8 +60,11 @@ label,description,group
 1029,ctx-lh-superiorparietal,2
 1030,ctx-lh-superiortemporal,2
 1031,ctx-lh-supramarginal,2
+1032,ctx-lh-frontalpole,2
+1033,ctx-lh-temporalpole,2
 1034,ctx-lh-transversetemporal,2
 1035,ctx-lh-insula,2
+2001,ctx-rh-bankssts,2
 2002,ctx-rh-caudalanteriorcingulate,2
 2003,ctx-rh-caudalmiddlefrontal,2
 2005,ctx-rh-cuneus,2
@@ -90,5 +94,7 @@ label,description,group
 2029,ctx-rh-superiorparietal,2
 2030,ctx-rh-superiortemporal,2
 2031,ctx-rh-supramarginal,2
+2032,ctx-rh-frontalpole,2
+2033,ctx-rh-temporalpole,2
 2034,ctx-rh-transversetemporal,2
 2035,ctx-rh-insula,2
