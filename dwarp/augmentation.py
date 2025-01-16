@@ -292,7 +292,7 @@ class spatial_aug:
         affine = tf.concat((affine, trans), axis=2)
         
         affine = tf.concat((affine, 
-                            tf.concat((tf.zeros((n,1,3)), tf.ones((n,1,1))), axis=2)), axis=1)
+                            tf.concat((tf.zeros((n,1,self.ndims)), tf.ones((n,1,1))), axis=2)), axis=1)
         
         return affine
     
