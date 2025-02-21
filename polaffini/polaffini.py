@@ -10,7 +10,7 @@ import time
 
 def estimateTransfo(mov_seg, ref_seg, alpha=1,
                     transfos_type='affine', dist='center', out_jac=False,
-                    omit_labs=[], sigma=15, weight_bg=1e-5, down_factor=4, bg_transfo=True):
+                    omit_labs=[], sigma='silverman', weight_bg=1e-5, down_factor=4, bg_transfo=True):
     """
     Polyaffine image registration through label centroids matching. 
 
@@ -50,8 +50,7 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
     polyAff_svf : ITK image
         SVF form of the polyaffine transformation.
     """
-    
-    sigma = float(sigma)
+        
     omit_labs = np.array(omit_labs)
     
     ref_seg = sitk.Cast(ref_seg, sitk.sitkInt64)
@@ -88,7 +87,13 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
                                 + np.reshape(transfo_aff_mov_inv[0:ndims, ndims], (ndims,1))) 
         ref_pts = np.transpose(np.matmul(transfo_aff_ref[0:ndims, 0:ndims], np.transpose(ref_pts))
                                 + np.reshape(transfo_aff_ref[0:ndims, ndims], (ndims,1)))    
-
+        
+    if sigma == 'silverman':
+        sigma = sigma_silverman(ref_pts)    
+        print(sigma)
+    else:
+        sigma = float(sigma)
+        
     if sigma != float('inf'):
         
         weight_map_sum = sitk.Image(ref_seg_down.GetSize(), sitk.sitkFloat64)
@@ -310,7 +315,6 @@ def opti_linear_transfo_between_point_sets(ref_pts, mov_pts,
     return loc_mat
 
 
-    
 def get_full_svf(aff_init, polyAff_svf, polyAff_svf_jac=None, bch_order=2):
     
     ndims = polyAff_svf.GetDimension()
@@ -351,5 +355,13 @@ def get_full_svf(aff_init, polyAff_svf, polyAff_svf_jac=None, bch_order=2):
     
     return full_svf
     
+
+def sigma_silverman(pts):
     
+    iqr = np.mean(np.quantile(pts, (3/4), axis=0) - np.quantile(pts, (1/4),axis=0))
+    std = np.mean(np.std(pts, axis=0))
+    sigma = 0.9 * np.min((std, iqr / 1.349)) * pts.shape[0] ** (-1/5)
+    
+    return sigma
+
     

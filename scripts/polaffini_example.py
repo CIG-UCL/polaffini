@@ -1,8 +1,8 @@
-dwarp_public_path = '/scratch0/NOT_BACKED_UP/alegouhy/dev/dwarp_public'   # put here the path to dwarp_public (where you cloned the repo)
+dwarp_public_path = ''   # put here the path to dwarp_public (where you cloned the repo)
 
 import sys
 if dwarp_public_path == '':
-    sys.exit('modify the path to dwarp_public in line 1')
+    sys.exit('modify the path to where you clone the repo in line 1')
 sys.path.append(dwarp_public_path) 
 import os
 import polaffini.utils as utils
@@ -23,8 +23,8 @@ target_seg = utils.imageIO(target_seg_file).read()
 
 # Peforming POLAFFINI estimation
 t = time.time()
-init_aff, polyAff_svf = polaffini.estimateTransfo(moving_seg, 
-                                                  target_seg, 
+init_aff, polyAff_svf = polaffini.estimateTransfo(moving_seg,
+                                                  target_seg,
                                                   omit_labs=[24,2,41])
 print("POLAFFINI estimation done in " + str(round(time.time()-t,3)) + " seconds.")
 
