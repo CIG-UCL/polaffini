@@ -90,9 +90,9 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
         
     if sigma == 'silverman':
         sigma = sigma_silverman(ref_pts)    
-        print(sigma)
     else:
         sigma = float(sigma)
+    
         
     if sigma != float('inf'):
         
@@ -201,10 +201,13 @@ def scale_aff_transfo(aff_transfo, alpha):
 
     
 def get_full_transfo(aff_init, polyAff_svf, invert=False, alpha=1):
+    
     ndims = aff_init.GetDimension()
+    
     if alpha != 1:
         aff_init = scale_aff_transfo(aff_init, alpha)
         polyAff_svf = sitk.Compose([alpha * sitk.VectorIndexSelectionCast(polyAff_svf, d) for d in range(ndims)])
+        
     if polyAff_svf is None:
         if invert:
             transfo_full = aff_init.GetInverse()
@@ -219,6 +222,7 @@ def get_full_transfo(aff_init, polyAff_svf, invert=False, alpha=1):
             polyAff = utils.integrate_svf(polyAff_svf)
             transfo_full = sitk.CompositeTransform(aff_init)
             transfo_full.AddTransform(polyAff)
+            
     return transfo_full
 
 

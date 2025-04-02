@@ -117,6 +117,7 @@ def polaffini_pair():
         resampler.SetInterpolator(sitk.sitkLinear)
         mov_aux = resampler.Execute(mov_aux)
         utils.imageIO(args.out_aux).write(mov_aux)
+        
     if args.out_seg is not None:
         resampler.SetInterpolator(sitk.sitkNearestNeighbor)
         mov_seg = resampler.Execute(mov_seg)
@@ -126,11 +127,13 @@ def polaffini_pair():
         sitk.WriteTransform(init_aff, args.out_aff_transfo)
     
     if args.out_poly_transfo is not None:
+        if polyAff_svf is None:
+            sys.exit('No polyaffine transfo. Maybe because sigma=inf (only an affine is estimated in that case).')
         utils.imageIO(args.out_poly_transfo).write(polyAff_svf)
     
     if args.out_transfo is not None:
         tr2disp = sitk.TransformToDisplacementFieldFilter()
-        tr2disp.SetReferenceImage(polyAff_svf)
+        tr2disp.SetReferenceImage(ref_seg)
         utils.imageIO(args.out_transfo).write(tr2disp.Execute(transfo))
    
     if args.kissing:
