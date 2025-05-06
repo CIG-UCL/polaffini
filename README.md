@@ -92,6 +92,37 @@ A parameter sigma modulates the smoothness.
                                                           -transfo 'rigid'
      ```
 
+
+### All parameters:
+inputs\
+`-ms` (required) Path to the moving segmentation.\
+`-rs` (required) Path to the reference segmentation, can be 'mni1' or 'mni2'.\
+`-m`, (default: None) Path to the moving image.\
+`-ma` (default: None) Path to the moving auxiliary image.\
+`-g` (default: None) Path to geometry image for resampling.\
+`-r` (default: None) Path to the reference image (for kissing).\
+`-ra` (default: None) Path to the reference auxiliary image (for kissing).\
+outputs\
+`-oi` (default: None) Path to output image.\
+`-os` (default: None) Path to output moved segmentation.\
+`-oa` (default: None) Path to output moved auxiliary image\
+`-ot` (default: None) Path to output full transformations in diffeo form.\
+`-ota` (default: None) Path to output affine part of transformation (.txt).\
+`-otp` (default: None) Path to output polyaffine part of the transformation in SVF form.\
+`-k` (default: 0) Kissing mapping: meets at location alpha on the diffeomorphic path.\
+polaffini parameters\
+`-transfo` (default: 'affine') Type of the local tranformations ('affine' or 'rigid').\
+`-sigma` (default: 15) Standard deviation (in mm) for the Gaussian kernel. The higher the sigma, the smoother the output transformation. Use inf for affine transformation.\
+`-alpha` (default: 1) Position of the overall transformation on the diffeomorphic path from identity to the transfo from moving to reference (e.g. use 0.5 for half-way registration).\
+`-wbg` (default: 1e-5) Weight of the global background transformation for stability.\
+`-downf` (default: 4) Downsampling factor of the transformation.\
+`-dist` (default: 'center') Distance used for the weight maps. 'center': distance to neighborhood center, or 'maurer': distance to label.\
+`-omit_labs` (default: []) List of labels to omit. 0 (background) is always omitted.\
+`-bg_transfo` (default: 1) Compute an affine background transformation (1:yes, 0:no).\
+other\
+`-do_bch` (default: 0) Use the BCH formula to compute the overall field (1:yes, 0:no).\
+    
+
 ## 3. POLAFFINI of a dataset onto a template
 
 The script `/scripts/polaffini_set2template.py` allows to perform POLAFFINI on a set of subjects as well as various data preparation such as intensity normalization, one-hot encoding of segmentations... It can be typically used to prepare the data to be fed to a deep-learning model during its training.\
