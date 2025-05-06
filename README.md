@@ -29,7 +29,7 @@ pip install git+https://github.com/CIG-UCL/polaffini.git
 ```
 
 # Segmentation
-**Polaffini** performs registration based on segmentations. You anatomical images therefore need to be segmented first.
+**Polaffini** performs registration based on segmentations. Images therefore need to be segmented first.
 
 Fine-grained segmentations can be obtained using traditional tools like:
  - FreeSurfer [[website]](https://surfer.nmr.mgh.harvard.edu/), using `recon-all`.
@@ -54,43 +54,43 @@ This script uses the data in `exmaple_data/`. Extract and tweak bits to fit your
 ## 2. **Polaffini** between 2 subjects (or subject to template)
 
 The following script covers most usage, it performs **Polaffini** registration between two subjects.\
-It uses the moving and target segmentations to estimate the transformation, then applies the transformation to the moving image.
+It uses the moving and target segmentations to estimate the transformation, then applies the transformation to the moving image.\
 A parameter sigma modulates the smoothness.
 
-By default, **Polaffini** estimates a polyaffine transformation with a smoothness parameter following Silverman's rule of thumb.
-```bash
-python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
-                                                     -ms <path-to-moving-segmentation>\
-                                                     -rs <path-to-target-segmentation>\
-                                                     -oi <path-to-output-moved-image>
-```
+   - By default, **Polaffini** estimates a polyaffine transformation with a smoothness parameter following Silverman's rule of thumb.
+     ```bash
+     python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
+                                                          -ms <path-to-moving-segmentation>\
+                                                          -rs <path-to-target-segmentation>\
+                                                          -oi <path-to-output-moved-image>
+     ```
 
-For a chosen smoothness (e.g. 15 mm works well for DKT segmentation):
-```bash
-python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
-                                                     -ms <path-to-moving-segmentation>\
-                                                     -rs <path-to-target-segmentation>\
-                                                     -oi <path-to-output-moved-image>\
-                                                     -sigma 15
-```
+   - For a chosen smoothness (e.g. 15 mm works well for DKT segmentation):
+     ```bash
+     python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
+                                                          -ms <path-to-moving-segmentation>\
+                                                          -rs <path-to-target-segmentation>\
+                                                          -oi <path-to-output-moved-image>\
+                                                          -sigma 15
+     ```
 
-To estimate an affine transformation, set the smoothness to infinity: 
-```bash
-python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
-                                                     -ms <path-to-moving-segmentation>\
-                                                     -rs <path-to-target-segmentation>\
-                                                     -oi <path-to-output-moved-image>\
-                                                     -sigma inf
-```
+   - To estimate an affine transformation, set the smoothness to infinity: 
+     ```bash
+     python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
+                                                          -ms <path-to-moving-segmentation>\
+                                                          -rs <path-to-target-segmentation>\
+                                                          -oi <path-to-output-moved-image>\
+                                                          -sigma inf
+     ```
 
-To estimate estimate rigid or polyrigid transformations, change the local transfos type to rigid:
-```bash
-python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
-                                                     -ms <path-to-moving-segmentation>\
-                                                     -rs <path-to-target-segmentation>\
-                                                     -oi <path-to-output-moved-image>\
-                                                     -transfo 'rigid'
-```
+   - To estimate estimate rigid or polyrigid transformations, change the local transfos type to rigid:
+     ```bash
+     python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
+                                                          -ms <path-to-moving-segmentation>\
+                                                          -rs <path-to-target-segmentation>\
+                                                          -oi <path-to-output-moved-image>\
+                                                          -transfo 'rigid'
+     ```
 
 ## 3. POLAFFINI of a dataset onto a template
 
