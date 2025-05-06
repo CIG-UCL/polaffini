@@ -1,42 +1,59 @@
 # Polaffini
 
-This repository contains code for:
- - **POLAFFINI** [1]: a segmentation-based polyaffine initialization for improved non-linear image registration. 
+This repository contains code for **Polaffini** [1], a feature-based approach for robust, anatomically grounded image registration.
 
-Most of the code is in Python, deep-learning stuffs are based on Tensorflow library, image IO and processing is done using SimpleITK (conversion through nibabel for mgh/mgz files), deep-learning registration uses Voxelmorph [2] core.
+**Polaffini** uses fine-grained segmentations to estimate a polyaffine transformation which anatomically grounded,
 
-# Installation
+**Polaffini** is versatile, one can estimate rigid, affine, polyrigid or polyaffine transformations. Polyaffine/polyrigid transformations [2] have much more dofs compared to their global counterparts. Yet they are diffeomorphic through the SVF framework embedding, and fast to compute since the local matchings have closed-form solutions.
 
-Installation can be done classically through git clone and installing the dependancies in `requirement.txt`. If you only need POLAFFFINI and do not install deep-learning stuff, you can use it as an independant module and use the requirement file in `requirements`.
+**Polaffini** is an efficient initialization to improve non-linear registration compared to the usual intensity-based affine pre-alignment (e.g. with FSL FLIRT).\
 
-Alternatively, one can use a pip command to do everything in one go:
-`pip install git+https://github.com/CIG-UCL/polaffini.git`
-
-
-# A. POLAFFINI
 <p align="center">
 <img src="imgs/diagram_polaffini.svg" width="85%">
 </p>
 
-POLAFFINI is an efficient initialization to improve non-linear registration compared to the usual intensity-based affine pre-alignment (e.g. with FSL FLIRT).\
-POLAFFINI uses fine-grain segmentations to estimate a polyaffine transformation which anatomically grounded, fast to compute, and has more dofs than its affine counterpart.
+The code is in Python, using SimpleITK for most of the image IO and processing.
+
+# Installation
+
+Installation can be done classically by cloning the repo and installing the dependancies in `requirement.txt`:
+```bash
+git clone git@github.com:CIG-UCL/polaffini.git
+cd polaffini
+pip install -r requirements.txt
+```
+
+Alternatively, one can use a pip command:
+```bash 
+pip install git+https://github.com/CIG-UCL/polaffini.git
+```
+
+# Segmentation
+**Polaffini** performs registration based on segmentations. You anatomical images therefore need to be segmented first.
 
 Fine-grained segmentations can be obtained using traditional tools like:
- - `recon-all` from FreeSurfer suite [[website]](https://surfer.nmr.mgh.harvard.edu/)
+ - FreeSurfer [[website]](https://surfer.nmr.mgh.harvard.edu/), using `recon-all`.
    
 or very quickly using pre-trained deep-learning models like:
 
  - FastSurfer [[github]](https://github.com/Deep-MI/FastSurfer)[[paper]](https://doi.org/10.1016/j.neuroimage.2020.117012)
- - SynthSeg [`mri_synthseg` in Freesurfer][[paper]](https://doi.org/10.1016/j.media.2023.102789) which is contrast agnostic.
+ - SynthSeg [[paper]](https://doi.org/10.1016/j.media.2023.102789) which is contrast agnostic.\
+   From Freesurfer:
+   ```bash
+   mri_synthseg --i <path-to-input-image> --o <path-to-output-segmentation> --parc
+   ```
+ - or any other segmentation tool...
 
- 
-## A.1. Small POLAFFINI tutorial
-A good way to understand how it works is to go through the following small tutorial: `dwarp_public/scripts/polaffini_example.py`.\
-This script uses the data available `dwarp_public/exmaple_data`. Extract and tweak bits to fit your needs.
 
-## A.2. POLAFFINI between 2 subjects
+# Using **Polaffini**
 
-The following script covers most usage, it performs POLAFFINI registration between two subjects.\
+## 1. Small **Polaffini** tutorial
+A good way to understand how it works is to go through the following small tutorial: `scripts/polaffini_example.py`.\
+This script uses the data in `exmaple_data/`. Extract and tweak bits to fit your needs.
+
+## 2. **Polaffini** between 2 subjects (or subject to template)
+
+The following script covers most usage, it performs **Polaffini** registration between two subjects.\
 It uses the moving and target segmentations to estimate the polyaffine transformation, then applies the transformation to the moving image.
 ```bash
 python <path-to-dwarp_public>/scripts/polaffini_pair.py -m <path-to-moving-image>\
@@ -45,15 +62,12 @@ python <path-to-dwarp_public>/scripts/polaffini_pair.py -m <path-to-moving-image
                                                         -oi <path-to-output-moved-image>
 ```
 
-## A.3. POLAFFINI of a dataset onto a template
+## 3. POLAFFINI of a dataset onto a template
 
 The script `/scripts/polaffini_set2template.py` allows to perform POLAFFINI on a set of subjects as well as various data preparation such as intensity normalization, one-hot encoding of segmentations... It can be typically used to prepare the data to be fed to a deep-learning model during its training.\
 See Section B.2.a. for an example.
 
 
-
-# Included ressources
-  - MNI template: The default MNI template used here is the [ICBM 2009c Nonlinear Symmetric](https://www.mcgill.ca/bic/icbm152-152-nonlinear-atlases-version-2009) version. One can find it, together with its associated DKT segmentation, in `dwarp_public/ref/` with voxel sizes 1 and 2 mm isotropic.
-
 # References
-  - [1] **POLAFFINI** [[IPMI 2023 paper]](https://link.springer.com/content/pdf/10.1007/978-3-031-34048-2_47.pdf?pdf=inline%20link).
+  - [1] A. Legouhy, R. Callaghan, H. Azadbakht and H. Zhang. POLAFFINI: Efficient feature-based polyaffine initialization for improved non-linear image registration. IPMI (2023) [[link]](https://arxiv.org/pdf/2407.03922).
+  - [2] V. Arsigny, O. Commowick, N. Ayache and X. Pennec. A Fast and Log-Euclidean Polyaffine Framework for Locally Linear Registration. J Math Imaging Vis 33, 222–238 (2009)
