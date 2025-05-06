@@ -1,8 +1,0 @@
-matplotlib==3.7.2
-neurite==0.2
-numpy==1.24.3
-pandas==2.0.3
-SimpleITK==2.3.1
-tensorflow==2.15.0
-voxelmorph==0.2
-nibabel==5.2.0

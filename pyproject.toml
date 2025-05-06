@@ -23,26 +23,15 @@ dependencies = [
 Homepage = "https://ainostics.com"
 Repository = "https://github.com/CIG-UCL/polaffini.git"
 
-[project.optional-dependencies]
-dwarp = [
-      "matplotlib==3.7.2",
-      "neurite==0.2",
-      "pandas==2.0.3",
-      "tensorflow[and-cuda]==2.15.1",
-      "voxelmorph==0.2"
-]
-
 [tool.setuptools]
 packages = [
          "polaffini",
-         "polaffini.scripts",
-         "dwarp"
+         "polaffini.scripts"
 ]
 
 [tool.setuptools.package-dir]
 polaffini = "polaffini"
 "polaffini.scripts" = "scripts"
-dwarp = "dwarp"
 
 [project.scripts]
 polaffini = "polaffini.scripts.polaffini_pair:polaffini_pair"
