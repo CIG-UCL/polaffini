@@ -7,7 +7,7 @@ This repository contains code for **Polaffini** [1], a feature-based approach fo
 **Polaffini** is versatile, one can estimate rigid, affine, polyrigid or polyaffine transformations.\
 Polyaffine/polyrigid transformations [2] have much more dofs compared to their global counterparts. Yet they are diffeomorphic through the SVF framework embedding, and fast to compute since the local matchings have closed-form solutions.
 
-**Polaffini** is an efficient initialization to improve non-linear registration compared to the usual intensity-based affine pre-alignment (e.g. with FSL FLIRT).\
+**Polaffini** is an efficient initialization to improve non-linear registration compared to the usual intensity-based affine pre-alignment (e.g. with FSL FLIRT).
 
 <p align="center">
 <img src="imgs/diagram_polaffini.svg" width="85%">

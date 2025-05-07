@@ -93,7 +93,6 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
     else:
         sigma = float(sigma)
     
-        
     if sigma != float('inf'):
         
         weight_map_sum = sitk.Image(ref_seg_down.GetSize(), sitk.sitkFloat64)
