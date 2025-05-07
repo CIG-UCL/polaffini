@@ -73,7 +73,7 @@ A parameter sigma modulates the smoothness.
                                                           -ms <path-to-moving-segmentation>\
                                                           -rs <path-to-target-segmentation>\
                                                           -oi <path-to-output-moved-image>\
-                                                          -omit_labs 2 41 24\
+                                                          -omit_labs 2 41 24
      ```
      
    - For a chosen smoothness (e.g. 15 mm works well for DKT segmentation):
