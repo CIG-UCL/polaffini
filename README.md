@@ -151,7 +151,7 @@ A parameter sigma modulates the smoothness.
      ```
 
    - To do the same but disantagling the background affine and the polyaffine part\
-     (The affine is a matrix, the polyaffine is saved in SVF (log) form.):
+     (the affine is a matrix, the polyaffine is saved in SVF (log) form):
      ```bash
      python ${polaffdir}/scripts/polaffini_pair.py -m <path-to-moving-image>\
                                                    -ms <path-to-moving-segmentation>\
@@ -161,7 +161,7 @@ A parameter sigma modulates the smoothness.
      
      python ${polaffdir}/scripts/apply_transfos.py -m <path-to-moving-image>\
                                                    -g <path-to-target-image>\
-                                                   -t $<path-to-affine-transfo> <path-to-polyaffine-transfo>\
+                                                   -t <path-to-affine-transfo> <path-to-polyaffine-transfo>\
                                                    -log 0 1\
                                                    -oi <path-to-moved-image>
      ```
