@@ -65,13 +65,25 @@ A parameter sigma modulates the smoothness.
                                                           -rs <path-to-target-segmentation>\
                                                           -oi <path-to-output-moved-image>
      ```
-
+     
+   - One might want to ignore some labels that are not relevant for the estimation\
+     (e.g. in the DKT segmentation: 2 and 41 are left and right cerebrum white matter which are too big, or 24 the outer CSF):
+     ```bash
+     python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
+                                                          -ms <path-to-moving-segmentation>\
+                                                          -rs <path-to-target-segmentation>\
+                                                          -oi <path-to-output-moved-image>\
+                                                          -omit_labs 2 41 24\
+                                                          -sigma 15
+     ```
+     
    - For a chosen smoothness (e.g. 15 mm works well for DKT segmentation):
      ```bash
      python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
                                                           -ms <path-to-moving-segmentation>\
                                                           -rs <path-to-target-segmentation>\
                                                           -oi <path-to-output-moved-image>\
+                                                          -omit_labs 2 41 24\
                                                           -sigma 15
      ```
 
@@ -113,7 +125,7 @@ outputs\
 `-k` (default: 0) Kissing mapping: meets at location alpha on the diffeomorphic path.\
 polaffini parameters\
 `-transfo` (default: 'affine') Type of the local tranformations ('affine' or 'rigid').\
-`-sigma` (default: 15) Standard deviation (in mm) for the Gaussian kernel. The higher the sigma, the smoother the output transformation. Use inf for affine transformation.\
+`-sigma` (default: 'silverman') Standard deviation (in mm) for the Gaussian kernel. The higher the sigma, the smoother the output transformation. Use inf for affine transformation.\
 `-alpha` (default: 1) Position of the overall transformation on the diffeomorphic path from identity to the transfo from moving to reference (e.g. use 0.5 for half-way registration).\
 `-wbg` (default: 1e-5) Weight of the global background transformation for stability.\
 `-downf` (default: 4) Downsampling factor of the transformation.\
