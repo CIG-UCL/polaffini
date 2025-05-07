@@ -2,9 +2,10 @@
 
 This repository contains code for **Polaffini** [1], a feature-based approach for robust, anatomically grounded image registration.
 
-**Polaffini** uses fine-grained segmentations to estimate a polyaffine transformation which anatomically grounded,
+**Polaffini** uses fine-grained segmentations to estimate a transformation that is anatomically grounded,
 
-**Polaffini** is versatile, one can estimate rigid, affine, polyrigid or polyaffine transformations. Polyaffine/polyrigid transformations [2] have much more dofs compared to their global counterparts. Yet they are diffeomorphic through the SVF framework embedding, and fast to compute since the local matchings have closed-form solutions.
+**Polaffini** is versatile, one can estimate rigid, affine, polyrigid or polyaffine transformations.\
+Polyaffine/polyrigid transformations [2] have much more dofs compared to their global counterparts. Yet they are diffeomorphic through the SVF framework embedding, and fast to compute since the local matchings have closed-form solutions.
 
 **Polaffini** is an efficient initialization to improve non-linear registration compared to the usual intensity-based affine pre-alignment (e.g. with FSL FLIRT).\
 
@@ -12,7 +13,7 @@ This repository contains code for **Polaffini** [1], a feature-based approach fo
 <img src="imgs/diagram_polaffini.svg" width="85%">
 </p>
 
-The code is in Python, using SimpleITK for most of the image IO and processing.
+The code is in Python, using SimpleITK for most of the image IO and processing. It runs on CPU and leverages multi-threading.
 
 # Installation
 
