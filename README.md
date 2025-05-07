@@ -1,4 +1,4 @@
-# Polaffini
+# <img src="imgs/logo_polaffini.svg" width="7%" /> Polaffini  
 
 This repository contains code for **Polaffini** [1], a feature-based approach for robust, anatomically grounded image registration.
 
@@ -137,12 +137,13 @@ A parameter sigma modulates the smoothness.
 
 ## 2. Applying a transformation from **Polaffini** to any image
 
-   - To output the full transfo and appy it to an image:
+   - To output the full transfo and apply it to an image:
      ```bash
      python ${polaffdir}/scripts/polaffini_pair.py -m <path-to-moving-image>\
                                                    -ms <path-to-moving-segmentation>\
                                                    -rs <path-to-target-segmentation>\
                                                    -ot ${transfo}
+     
      python ${polaffdir}/scripts/apply_transfos.py -m <path-to-moving-image>\
                                                    -g <path-to-target-image>\
                                                    -t <path-to-full-transfo>\
@@ -157,14 +158,13 @@ A parameter sigma modulates the smoothness.
                                                    -rs <path-to-target-segmentation>\
                                                    -ota <path-to-affine-transfo>\
                                                    -otp <path-to-polyaffine-transfo>
- 
+     
      python ${polaffdir}/scripts/apply_transfos.py -m <path-to-moving-image>\
                                                    -g <path-to-target-image>\
                                                    -t $<path-to-affine-transfo> <path-to-polyaffine-transfo>\
                                                    -log 0 1\
                                                    -oi <path-to-moved-image>
- 
-    ```
+     ```
 
 
 
