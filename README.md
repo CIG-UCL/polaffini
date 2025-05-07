@@ -139,31 +139,31 @@ A parameter sigma modulates the smoothness.
 
    - To output the full transfo and apply it to an image:
      ```bash
-     python ${polaffdir}/scripts/polaffini_pair.py -m <path-to-moving-image>\
-                                                   -ms <path-to-moving-segmentation>\
-                                                   -rs <path-to-target-segmentation>\
-                                                   -ot ${transfo}
+     python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
+                                                          -ms <path-to-moving-segmentation>\
+                                                          -rs <path-to-target-segmentation>\
+                                                          -ot ${transfo}
      
-     python ${polaffdir}/scripts/apply_transfos.py -m <path-to-moving-image>\
-                                                   -g <path-to-target-image>\
-                                                   -t <path-to-full-transfo>\
-                                                   -oi <path-to-moved-image>
+     python <path-to-polaffini>/scripts/apply_transfos.py -m <path-to-moving-image>\
+                                                          -g <path-to-target-image>\
+                                                          -t <path-to-full-transfo>\
+                                                          -oi <path-to-moved-image>
      ```
 
    - To do the same but disantagling the background affine and the polyaffine part\
      (the affine is a matrix, the polyaffine is saved in SVF (log) form):
      ```bash
-     python ${polaffdir}/scripts/polaffini_pair.py -m <path-to-moving-image>\
-                                                   -ms <path-to-moving-segmentation>\
-                                                   -rs <path-to-target-segmentation>\
-                                                   -ota <path-to-affine-transfo>\
-                                                   -otp <path-to-polyaffine-transfo>
+     python <path-to-polaffini>/scripts/polaffini_pair.py -m <path-to-moving-image>\
+                                                          -ms <path-to-moving-segmentation>\
+                                                          -rs <path-to-target-segmentation>\
+                                                          -ota <path-to-affine-transfo>\
+                                                          -otp <path-to-polyaffine-transfo>
      
-     python ${polaffdir}/scripts/apply_transfos.py -m <path-to-moving-image>\
-                                                   -g <path-to-target-image>\
-                                                   -t <path-to-affine-transfo> <path-to-polyaffine-transfo>\
-                                                   -log 0 1\
-                                                   -oi <path-to-moved-image>
+     python <path-to-polaffini>/scripts/apply_transfos.py -m <path-to-moving-image>\
+                                                          -g <path-to-target-image>\
+                                                          -t <path-to-affine-transfo> <path-to-polyaffine-transfo>\
+                                                          -log 0 1\
+                                                          -oi <path-to-moved-image>
      ```
 
 
