@@ -54,7 +54,7 @@ This script uses the data in `exmaple_data/`. Extract and tweak bits to fit your
 
 ## 2. **Polaffini** between 2 subjects (or subject to template)
 
-The following script covers most usage, it performs **Polaffini** registration between two subjects.\
+The script `polaffini_pair` should cover most usage. It performs **Polaffini** registration between two subjects.\
 It uses the moving and target segmentations to estimate the transformation, then applies the transformation to the moving image.\
 A parameter sigma modulates the smoothness.
 
@@ -104,7 +104,6 @@ A parameter sigma modulates the smoothness.
                                                           -transfo 'rigid'
      ```
 
-
 ### All parameters:
    - Inputs:\
      `-ms` (required) Path to the moving segmentation.\
@@ -134,6 +133,40 @@ A parameter sigma modulates the smoothness.
    - Other\
      `-do_bch` (default: 0) Use the BCH formula to compute the overall field (1:yes, 0:no).
     
+
+
+## 2. Applying a transformation from **Polaffini** to any image
+
+   - To output the full transfo and appy it to an image:
+     ```bash
+     python ${polaffdir}/scripts/polaffini_pair.py -m <path-to-moving-image>\
+                                                   -ms <path-to-moving-segmentation>\
+                                                   -rs <path-to-target-segmentation>\
+                                                   -ot ${transfo}
+     python ${polaffdir}/scripts/apply_transfos.py -m <path-to-moving-image>\
+                                                   -g <path-to-target-image>\
+                                                   -t <path-to-full-transfo>\
+                                                   -oi <path-to-moved-image>
+     ```
+
+   - To do the same but disantagling the background affine and the polyaffine part\
+     (The affine is a matrix, the polyaffine is saved in SVF (log) form.):
+     ```bash
+     python ${polaffdir}/scripts/polaffini_pair.py -m <path-to-moving-image>\
+                                                   -ms <path-to-moving-segmentation>\
+                                                   -rs <path-to-target-segmentation>\
+                                                   -ota <path-to-affine-transfo>\
+                                                   -otp <path-to-polyaffine-transfo>
+ 
+     python ${polaffdir}/scripts/apply_transfos.py -m <path-to-moving-image>\
+                                                   -g <path-to-target-image>\
+                                                   -t $<path-to-affine-transfo> <path-to-polyaffine-transfo>\
+                                                   -log 0 1\
+                                                   -oi <path-to-moved-image>
+ 
+    ```
+
+
 
 ## 3. POLAFFINI of a dataset onto a template
 
