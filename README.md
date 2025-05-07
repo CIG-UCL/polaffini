@@ -174,6 +174,6 @@ The script `/scripts/polaffini_set2template.py` allows to perform POLAFFINI on a
 
 
 # References
-If you use **Polaffini** for your work, please cite [1] (and poltentially also [2]).
+If you use **Polaffini** for your work, please cite [1] (and potentially also [2]).
   - [1] A. Legouhy, R. Callaghan, H. Azadbakht and H. Zhang. POLAFFINI: Efficient feature-based polyaffine initialization for improved non-linear image registration. IPMI (2023) [[link]](https://arxiv.org/abs/2407.03922).
   - [2] V. Arsigny, O. Commowick, N. Ayache and X. Pennec. A Fast and Log-Euclidean Polyaffine Framework for Locally Linear Registration. J Math Imaging Vis 33, 222–238 (2009)
