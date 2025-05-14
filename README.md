@@ -1,3 +1,5 @@
+## If you are looking for **Eddeep**, go to this [[repo]](https://github.com/CIG-UCL/eddeep).
+
 # <img src="imgs/logo_polaffini.svg" width="7%" /> Polaffini  
 
 This repository contains code for **Polaffini** [1], a feature-based approach for robust, anatomically grounded image registration.
