@@ -1,4 +1,4 @@
-## If you are looking for **Eddeep**, go to this [[repo]](https://github.com/CIG-UCL/eddeep).
+## ⚠️ If you are looking for **Eddeep**, go to this [[repo]](https://github.com/CIG-UCL/eddeep). ⚠️
 
 # <img src="imgs/logo_polaffini.svg" width="7%" /> Polaffini  
 
