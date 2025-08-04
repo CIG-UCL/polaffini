@@ -9,7 +9,7 @@ import time
 #%% 
 
 def estimateTransfo(mov_seg, ref_seg, alpha=1,
-                    transfos_type='affine', dist='center', out_jac=False,
+                    transfos_type='affine', bg_transfo_type='affine', dist='center', out_jac=False,
                     omit_labs=[], sigma='silverman', weight_bg=1e-5, down_factor=4, bg_transfo=True):
     """
     Polyaffine image registration through label centroids matching. 
@@ -26,6 +26,9 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
         The default is 1.
     transfos_type : str, optional
         Type of the local transformations between neightborhoods of feature points.
+        'affine', 'rigid', 'translation' or 'volrot' (uses volumes also). The default is 'affine'.
+    bg_transfo_type : str, optional
+        Type of the background transformation.
         'affine', 'rigid', 'translation' or 'volrot' (uses volumes also). The default is 'affine'.
     dist : str, optional
         Distance used for the weight maps.
@@ -76,7 +79,7 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
         transfo_aff = opti_linear_transfo_between_point_sets(ref_pts, mov_pts, 
                                                              ref_vol=np.sum(ref_vols) if ref_vols is not None else None,
                                                              mov_vol=np.sum(mov_vols) if mov_vols is not None else None,
-                                                             transfos_type=transfos_type) 
+                                                             transfos_type=bg_transfo_type) 
         transfo_aff_mov = expm(alpha*logm(transfo_aff)) 
         transfo_aff_mov_inv = expm(-alpha*logm(transfo_aff)) 
         transfo_aff_ref = expm((1-alpha)*logm(transfo_aff)) 

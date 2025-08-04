@@ -29,7 +29,8 @@ parser.add_argument('-mask', '--mask', type=int, required=False, default=1, help
 parser.add_argument('-kpad', '--k-padding', type=int, required=False, default=5, help='Pad an image such that image size along each dimension  is a multiple of 2^k (k must be greater than the number of contracting levels). Default: 5.')
 parser.add_argument('-ext', '--ext', type=str, required=False, default='.nii.gz', help="Extension of output images. Default: '.nii.gz'.")
 # polaffini parameters
-parser.add_argument('-transfo', '--transfos-type', type=str, required=False, default='affine', help="Type of the local tranformations ('affine' or 'rigid'). Default: 'affine'.")
+parser.add_argument('-transfo', '--transfos-type', type=str, required=False, default='affine', help="Type of the local tranformations ('affine', 'rigid', 'translation' or 'volrot' (rigid and volume)). Default: 'affine'.")
+parser.add_argument('-transfo_bg', '--bg-transfo-type', type=str, required=False, default='affine', help="Type of the background tranformation ('affine', 'rigid', 'translation' or 'volrot' (rigid and volume)). Default: 'affine'.")
 parser.add_argument('-sigma', '--sigma', type=float, required=False, default=15, help='Standard deviation (in mm) for the Gaussian kernel. The higher the sigma, the smoother the output transformation. Use inf for affine transformation. Default: 15.')
 parser.add_argument('-wbg', '--weight-bg', type=float, required=False, default=1e-5, help='Weight of the global background transformation for stability. Default: 1e-5.')
 parser.add_argument('-downf', '--down-factor', type=float, required=False, default=4, help='Downsampling factor of the transformation. Default: 4.')
@@ -78,6 +79,7 @@ def init_polaffini_set(mov_files,
                                                           sigma=sigma,
                                                           weight_bg=weight_bg,
                                                           transfos_type=transfos_type,
+                                                          bg_transfo_type = args.bg_transfo_type,
                                                           down_factor=down_factor,
                                                           dist=dist,
                                                           omit_labs=omit_labs,
@@ -189,6 +191,7 @@ if args.proc <= 1:
                        sigma=args.sigma,
                        weight_bg=args.weight_bg,
                        transfos_type=args.transfos_type,
+                       bg_transfo_type = args.bg_transfo_type,
                        out_transfo=args.out_transfo,
                        down_factor=args.down_factor,
                        dist=args.dist,
@@ -212,6 +215,7 @@ else:
                                                             sigma=args.sigma, 
                                                             weight_bg=args.weight_bg,
                                                             transfos_type=args.transfos_type,
+                                                            bg_transfo_type = args.bg_transfo_type,
                                                             out_transfo=args.out_transfo,
                                                             down_factor=args.down_factor,
                                                             dist=args.dist,

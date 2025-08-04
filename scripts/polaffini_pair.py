@@ -27,7 +27,8 @@ def polaffini_pair():
     parser.add_argument('-otp', '--out-poly-transfo', type=str, required=False, default=None, help='Path to output polyaffine part of the transformation in SVF form.')
     parser.add_argument('-k', '--kissing', type=int, required=False, default=0, help='Kissing mapping: meets at location alpha on the diffeomorphic path.')
     # polaffini parameters
-    parser.add_argument('-transfo', '--transfos-type', type=str, required=False, default='affine', help="Type of the local tranformations ('affine' or 'rigid'). Default: 'affine'.")
+    parser.add_argument('-transfo', '--transfos-type', type=str, required=False, default='affine', help="Type of the local tranformations ('affine', 'rigid', 'translation' or 'volrot' (rigid and volume)). Default: 'affine'.")
+    parser.add_argument('-transfo_bg', '--bg-transfo-type', type=str, required=False, default='affine', help="Type of the background tranformation ('affine', 'rigid', 'translation' or 'volrot' (rigid and volume)). Default: 'affine'.")
     parser.add_argument('-sigma', '--sigma', type=float, required=False, default=None, help="Standard deviation (in mm) for the Gaussian kernel. The higher the sigma, the smoother the output transformation. Use inf for affine transformation. Default: 'silverman'.")
     parser.add_argument('-alpha', '--alpha', type=float, required=False, default=1, help='Position of the overall transformation on the diffeomorphic path from identity to the transfo from moving to reference (e.g. use 0.5 for half-way registration). Default: 1.')
     parser.add_argument('-wbg', '--weight-bg', type=float, required=False, default=1e-5, help='Weight of the global background transformation for stability. Default: 1e-5.')
@@ -55,7 +56,6 @@ def polaffini_pair():
     if args.sigma is None:
         args.sigma = 'silverman'
         
-        
     if args.do_bch:
         init_aff, polyAff_svf, polyAff_svf_jac = polaffini.estimateTransfo(mov_seg=mov_seg,
                                                                            ref_seg=ref_seg,
@@ -63,6 +63,7 @@ def polaffini_pair():
                                                                            alpha=1,
                                                                            weight_bg=args.weight_bg,
                                                                            transfos_type=args.transfos_type,
+                                                                           bg_transfo_type = args.bg_transfo_type,
                                                                            down_factor=args.down_factor,
                                                                            dist=args.dist,
                                                                            omit_labs=args.omit_labs,
@@ -80,6 +81,7 @@ def polaffini_pair():
                                                           alpha=args.alpha,
                                                           weight_bg=args.weight_bg,
                                                           transfos_type=args.transfos_type,
+                                                          bg_transfo_type = args.bg_transfo_type,
                                                           down_factor=args.down_factor,
                                                           dist=args.dist,
                                                           omit_labs=args.omit_labs,
@@ -93,6 +95,7 @@ def polaffini_pair():
                                                                        alpha=1-args.alpha,
                                                                        weight_bg=args.weight_bg,
                                                                        transfos_type=args.transfos_type,
+                                                                       bg_transfo_type = args.bg_transfo_type,
                                                                        down_factor=args.down_factor,
                                                                        dist=args.dist,
                                                                        omit_labs=args.omit_labs,
