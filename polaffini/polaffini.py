@@ -2,15 +2,13 @@ import SimpleITK as sitk
 import numpy as np
 import scipy.spatial
 from scipy.linalg import logm, expm
-import copy
 from . import utils
-import time
 
 #%% 
 
 def estimateTransfo(mov_seg, ref_seg, alpha=1,
                     transfos_type='affine', bg_transfo_type='affine', dist='center', out_jac=False,
-                    omit_labs=[], sigma='silverman', weight_bg=1e-5, down_factor=4, bg_transfo=True):
+                    omit_labs=[], sigma='silverman', weight_bg=1e-5, down_factor=4, bg_transfo=True, vol_weights=False):
     """
     Polyaffine image registration through label centroids matching. 
 
@@ -64,9 +62,7 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
 
     ref_seg_down = sitk.Shrink(ref_seg, [int(down_factor)]*ndims)    
     
-    get_volumes = False
-    if transfos_type == 'volrot':
-        get_volumes = True
+    get_volumes = (transfos_type == 'volrot') or vol_weights
 
     ref_pts, ref_vols = get_label_stats(ref_seg, labs, get_volumes=get_volumes)
     mov_pts, mov_vols = get_label_stats(mov_seg, labs, get_volumes=get_volumes)
@@ -76,20 +72,21 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
     
     aff_init = sitk.AffineTransform(ndims)
     if bg_transfo:
-        transfo_aff = opti_linear_transfo_between_point_sets(ref_pts, mov_pts, 
-                                                             ref_vol=np.sum(ref_vols) if ref_vols is not None else None,
-                                                             mov_vol=np.sum(mov_vols) if mov_vols is not None else None,
-                                                             transfos_type=bg_transfo_type) 
+        transfo_aff = opti_linear_transfo(ref_pts, mov_pts, 
+                                          ref_vol=np.sum(ref_vols) if ref_vols is not None else None,
+                                          mov_vol=np.sum(mov_vols) if mov_vols is not None else None,
+                                          transfos_type=bg_transfo_type,
+                                          weights=ref_vols if vol_weights else None) 
         transfo_aff_mov = expm(alpha*logm(transfo_aff)) 
         transfo_aff_mov_inv = expm(-alpha*logm(transfo_aff)) 
         transfo_aff_ref = expm((1-alpha)*logm(transfo_aff)) 
 
         aff_init.SetMatrix((transfo_aff_mov[0:ndims, 0:ndims]).ravel())
         aff_init.SetTranslation(transfo_aff_mov[0:ndims, ndims])        
-        mov_pts = np.transpose(np.matmul(transfo_aff_mov_inv[0:ndims, 0:ndims], np.transpose(mov_pts))
-                                + np.reshape(transfo_aff_mov_inv[0:ndims, ndims], (ndims,1))) 
-        ref_pts = np.transpose(np.matmul(transfo_aff_ref[0:ndims, 0:ndims], np.transpose(ref_pts))
-                                + np.reshape(transfo_aff_ref[0:ndims, ndims], (ndims,1)))    
+        mov_pts = ((transfo_aff_mov_inv[0:ndims, 0:ndims] @ mov_pts.T)
+                                + np.reshape(transfo_aff_mov_inv[0:ndims, ndims], (ndims,1))).T 
+        ref_pts = ((transfo_aff_ref[0:ndims, 0:ndims] @ ref_pts.T)
+                                + np.reshape(transfo_aff_ref[0:ndims, ndims], (ndims,1))).T  
         
     if sigma == 'silverman':
         sigma = sigma_silverman(ref_pts)    
@@ -135,11 +132,11 @@ def estimateTransfo(mov_seg, ref_seg, alpha=1,
             if transfos_type == 'rigid' and sum(ind) < 2:
                 continue
             
-            loc_mat = opti_linear_transfo_between_point_sets(ref_pts[ind, :], 
-                                                             mov_pts[ind, :], 
-                                                             ref_vol=ref_vols[l] if ref_vols is not None else None,
-                                                             mov_vol=mov_vols[l] if mov_vols is not None else None,
-                                                             transfos_type=transfos_type)   
+            loc_mat = opti_linear_transfo(ref_pts[ind, :], 
+                                          mov_pts[ind, :], 
+                                          ref_vol=ref_vols[l] if ref_vols is not None else None,
+                                          mov_vol=mov_vols[l] if mov_vols is not None else None,
+                                          transfos_type=transfos_type)   
             loc_mat = alpha * logm(loc_mat)
             if not np.isrealobj(loc_mat):
                 continue
@@ -290,36 +287,43 @@ def delaunay_triangulation(points, labs):
     return DTlab
 
 
-def opti_linear_transfo_between_point_sets(ref_pts, mov_pts,
-                                           ref_vol=None, mov_vol=None, transfos_type='affine'):
-
-    ref_pts_mean = np.mean(ref_pts, axis=0)
-    mov_pts_mean = np.mean(mov_pts, axis=0)
+def opti_linear_transfo(ref_pts, mov_pts,
+                        ref_vol=None, mov_vol=None, 
+                        transfos_type='affine', weights=None):
+    
+    npts, ndims = ref_pts.shape
+    
+    if weights is None:
+        weights = np.ones(npts)
+    weights = weights / np.sum(weights)
+    W = np.diag(weights)
+    
+    ref_pts_mean = np.average(ref_pts, axis=0, weights=weights)
+    mov_pts_mean = np.average(mov_pts, axis=0, weights=weights)
     ref_pts = ref_pts - ref_pts_mean
     mov_pts = mov_pts - mov_pts_mean
-    ndims = ref_pts.shape[1]
-    
+        
     if transfos_type == 'translation':
         linear_part = np.eye(ndims)
         
     elif transfos_type == 'affine':
-        linear_part = np.transpose(np.linalg.lstsq(ref_pts, mov_pts, rcond=None)[0])
+        linear_part = np.linalg.inv(ref_pts.T @ W @ ref_pts) @ (ref_pts.T @ W @ mov_pts)
+        linear_part = linear_part.T
         
     elif transfos_type in ('rigid','volrot'):
         # see Pennec PhD or Horn 1987 for rigid
-        corr = np.matmul(np.transpose(mov_pts), ref_pts)
+        corr = mov_pts.T @ W @ ref_pts
         u, d, vt = np.linalg.svd(corr)
         s = [1]*(ndims-1) + [round(np.linalg.det(u)*np.linalg.det(vt))]
-        linear_part = np.matmul(np.matmul(u, np.diag(s)),vt)
+        linear_part = u @ np.diag(s) @ vt
         if transfos_type == 'volrot':
             linear_part *= (mov_vol / ref_vol) ** (1 / ndims)
     
-    translat_part = mov_pts_mean - np.matmul(linear_part, ref_pts_mean)
+    translat_part = mov_pts_mean - linear_part @ ref_pts_mean
     loc_mat = np.concatenate((linear_part, translat_part[:,np.newaxis]), axis=1)
     loc_mat = np.concatenate((loc_mat, [[0]*ndims+[1]]))
     
     return loc_mat
-
 
 def get_full_svf(aff_init, polyAff_svf, polyAff_svf_jac=None, bch_order=2):
     
@@ -349,7 +353,7 @@ def get_full_svf(aff_init, polyAff_svf, polyAff_svf_jac=None, bch_order=2):
         
         polyAff_svf_jac = sitk.GetArrayFromImage(polyAff_svf_jac).reshape(aff_svf_jac.shape)
     
-        lie_bracket = np.matmul(aff_svf_jac, polyAff_svf) - np.matmul(polyAff_svf_jac, aff_svf)
+        lie_bracket = (aff_svf_jac @ polyAff_svf) - (polyAff_svf_jac @ aff_svf)
     
         full_svf += lie_bracket / 2      # BCH formula order 2
     
