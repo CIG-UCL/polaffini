@@ -36,7 +36,7 @@ def polaffini_pair():
     parser.add_argument('-dist', '--dist', type=str, required=False, default='center', help="Distance used for the weight maps. 'center': distance to neighborhood center, or 'maurer': distance to label. Default: 'center'.")
     parser.add_argument('-omit_labs','--omit-labs', type=int, nargs='+', required=False, default=[], help='List of labels to omit. Default: []. 0 (background) is always omitted.')
     parser.add_argument('-bg_transfo','--bg-transfo', type=int, required=False, default=1, help='Compute an affine background transformation. (1:yes, 0:no). Default: 1.')
-    parser.add_argument('-vol_weights','--volw', type=int, required=False, default=0, help='Weight by region volumes when estimating the background transformation. (1:yes, 0:no). Default: 1.')
+    parser.add_argument('-volw','--vol_weights', type=int, required=False, default=0, help='Weight by region volumes when estimating the background transformation. (1:yes, 0:no). Default: 1.')
     # other
     parser.add_argument('-do_bch','--do-bch', type=int, required=False, default=0, help='Use the BCH formula to compute the overall field. (1:yes, 0:no). Default: 0.')
     
