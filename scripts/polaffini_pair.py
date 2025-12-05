@@ -36,10 +36,15 @@ def polaffini_pair():
     parser.add_argument('-dist', '--dist', type=str, required=False, default='center', help="Distance used for the weight maps. 'center': distance to neighborhood center, or 'maurer': distance to label. Default: 'center'.")
     parser.add_argument('-omit_labs','--omit-labs', type=int, nargs='+', required=False, default=[], help='List of labels to omit. Default: []. 0 (background) is always omitted.')
     parser.add_argument('-bg_transfo','--bg-transfo', type=int, required=False, default=1, help='Compute an affine background transformation. (1:yes, 0:no). Default: 1.')
+    parser.add_argument('-vol_weights','--volw', type=int, required=False, default=0, help='Weight by region volumes when estimating the background transformation. (1:yes, 0:no). Default: 1.')
     # other
     parser.add_argument('-do_bch','--do-bch', type=int, required=False, default=0, help='Use the BCH formula to compute the overall field. (1:yes, 0:no). Default: 0.')
     
     args = parser.parse_args(args=None if sys.argv[1:] else ['--help'])
+    
+    args.bg_transfo = bool(args.bg_transfo)
+    args.vol_weights = bool(args.vol_weights)
+    args.do_bch = bool(args.do_bch)
 
     #%% Main
 
@@ -68,7 +73,8 @@ def polaffini_pair():
                                                                            dist=args.dist,
                                                                            omit_labs=args.omit_labs,
                                                                            bg_transfo=args.bg_transfo,
-                                                                           out_jac=True)
+                                                                           out_jac=True,
+                                                                           vol_weights=args.vol_weights)
         full_svf = polaffini.get_full_svf(init_aff, polyAff_svf, polyAff_svf_jac)
         transfo = polaffini.integrate_svf_lowMem(full_svf, alpha=args.alpha)
         if args.kissing:
@@ -85,7 +91,8 @@ def polaffini_pair():
                                                           down_factor=args.down_factor,
                                                           dist=args.dist,
                                                           omit_labs=args.omit_labs,
-                                                          bg_transfo=args.bg_transfo)
+                                                          bg_transfo=args.bg_transfo,
+                                                          vol_weights=args.vol_weights)
         transfo = polaffini.get_full_transfo(init_aff, polyAff_svf)
     
         if args.kissing:
@@ -99,7 +106,8 @@ def polaffini_pair():
                                                                        down_factor=args.down_factor,
                                                                        dist=args.dist,
                                                                        omit_labs=args.omit_labs,
-                                                                       bg_transfo=args.bg_transfo)
+                                                                       bg_transfo=args.bg_transfo,
+                                                                       vol_weights=args.vol_weights)
              transfo_rev = polaffini.get_full_transfo(init_aff_rev, polyAff_svf_rev)
 
      

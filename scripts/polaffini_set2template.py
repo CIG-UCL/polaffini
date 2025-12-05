@@ -37,6 +37,8 @@ parser.add_argument('-downf', '--down-factor', type=float, required=False, defau
 parser.add_argument('-dist', '--dist', type=str, required=False, default='center', help="Distance used for the weight maps. 'center': distance to neighborhood center, or 'maurer': distance to label. Default: 'center'.")
 parser.add_argument('-omit_labs','--omit-labs', type=int, nargs='+', required=False, default=[], help='List of labels to omit. Default: []. 0 (background) is always omitted.')
 parser.add_argument('-bg_transfo','--bg-transfo', type=int, required=False, default=1, help='Compute an affine background transformation. (1:yes, 0:no). Default: 1.')
+parser.add_argument('-vol_weights','--volw', type=int, required=False, default=0, help='Weight by region volumes when estimating the background transformation. (1:yes, 0:no). Default: 1.')
+
 # other       
 parser.add_argument('-p', '--proc', type=int, required=False, default=1, help='Number of processes for parallel computing. Default: 1')
 
@@ -46,6 +48,7 @@ args.out_seg = bool(args.out_seg)
 args.mask = bool(args.mask)
 args.one_hot = bool(args.one_hot)
 args.bg_transfo = bool(args.bg_transfo)
+args.vol_weights = bool(args.vol_weights)
 if args.ext[0] != '.':
     args.ext = '.' + args.ext
                 
@@ -66,7 +69,7 @@ def init_polaffini_set(mov_files,
                        out_seg=False,
                        one_hot=True,
                        ext='.nii.gz',
-                       sigma=30, weight_bg=1e-5, transfos_type='affine', down_factor=8, dist='center', omit_labs=[], bg_transfo=True):
+                       sigma=30, weight_bg=1e-5, transfos_type='affine', down_factor=8, dist='center', omit_labs=[], bg_transfo=True, vol_weights=True):
 
     for i in range(len(mov_files)):
         if args.proc <= 1:
@@ -83,7 +86,8 @@ def init_polaffini_set(mov_files,
                                                           down_factor=down_factor,
                                                           dist=dist,
                                                           omit_labs=omit_labs,
-                                                          bg_transfo=bg_transfo)
+                                                          bg_transfo=bg_transfo,
+                                                          vol_weights=vol_weights)
         transfo = polaffini.get_full_transfo(init_aff, polyAff_svf)
         
         # apply transfos, rescale intensities, one hot encoding, write images
@@ -196,7 +200,8 @@ if args.proc <= 1:
                        down_factor=args.down_factor,
                        dist=args.dist,
                        omit_labs=args.omit_labs,
-                       bg_transfo=args.bg_transfo)
+                       bg_transfo=args.bg_transfo,
+                       vol_weights=args.vol_weights)
 
 else:
      if mov_aux_files is None:
@@ -220,7 +225,8 @@ else:
                                                             down_factor=args.down_factor,
                                                             dist=args.dist,
                                                             omit_labs=args.omit_labs,
-                                                            bg_transfo=args.bg_transfo) for i in range(len(mov_files)))
+                                                            bg_transfo=args.bg_transfo,
+                                                            vol_weights=args.vol_weights) for i in range(len(mov_files)))
 
 utils.imageIO(os.path.join(args.out_dir, 'ref_img' + args.ext)).write(ref)
 if args.ref_aux:
