@@ -2,12 +2,12 @@
 
 # <img src="imgs/logo_polaffini.svg" width="7%" /> Polaffini  
 
-This repository contains code for **Polaffini** [1], a feature-based approach for robust, anatomically grounded image registration.
+This repository contains code for **Polaffini** [1,2], a feature-based approach for robust, anatomically grounded image registration.
 
 **Polaffini** uses fine-grained segmentations to estimate a transformation that is anatomically grounded,
 
 **Polaffini** is versatile, one can estimate rigid, affine, polyrigid or polyaffine transformations.\
-Polyaffine/polyrigid transformations [2] have much more dofs compared to their global counterparts. Yet they are diffeomorphic through the SVF framework embedding, and fast to compute since the local matchings have closed-form solutions.
+Polyaffine/polyrigid transformations [3] have much more dofs compared to their global counterparts. Yet they are diffeomorphic through the SVF framework embedding, and fast to compute since the local matchings have closed-form solutions.
 
 **Polaffini** is an efficient initialization to improve non-linear registration compared to the usual intensity-based affine pre-alignment (e.g. with FSL FLIRT).
 
@@ -176,6 +176,7 @@ The script `/scripts/polaffini_set2template.py` allows to perform POLAFFINI on a
 
 
 # References
-If you use **Polaffini** for your work, please cite [1] (and potentially also [2]).
-  - [1] A. Legouhy, R. Callaghan, H. Azadbakht and H. Zhang. POLAFFINI: Efficient feature-based polyaffine initialization for improved non-linear image registration. IPMI (2023) [[link]](https://arxiv.org/abs/2407.03922).
-  - [2] V. Arsigny, O. Commowick, N. Ayache and X. Pennec. A Fast and Log-Euclidean Polyaffine Framework for Locally Linear Registration. J Math Imaging Vis 33, 222–238 (2009)
+If you use **Polaffini** for your work, please cite [1,2] (and potentially also [3]).
+  - [1] A. Legouhy, R. Callaghan, H. Azadbakht and H. Zhang. POLAFFINI: Efficient feature-based polyaffine initialization for improved non-linear image registration. IPMI (2023) [[arxiv]](https://arxiv.org/abs/2407.03922).
+  - [2] A. Legouhy, C. Campo, R. Callaghan, H. Azadbakht and H. Zhang. Polaffini: A feature-based approach for robust affine and polyaffine image registration. Imaging Neuroscience (under review) [[arxiv]](https://arxiv.org/abs/2602.17337).
+  - [3] V. Arsigny, O. Commowick, N. Ayache and X. Pennec. A Fast and Log-Euclidean Polyaffine Framework for Locally Linear Registration. J Math Imaging Vis 33, 222–238 (2009)
